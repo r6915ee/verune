@@ -1,0 +1,11 @@
+// Project tasks configuration. See https://zed.dev/docs/tasks for documentation.
+//
+// Example:
+[
+  {
+    "label": "Generate AsciiDoc documentation",
+    "command": "asciidoctor -D docs/ ruleport/SPECIFICATION.adoc",
+    "hide": "on_success",
+    "show_summary": false
+  }
+]

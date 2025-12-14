@@ -1,0 +1,13 @@
+[package]
+name = "ruleport"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+concat-idents = "1.1.5"
+itoa = "1.0.15"
+ryu = "1.0.20"
+serde = "1.0.228"
+
+[dev-dependencies]
+serde = { version = "1.0.228", features = ["derive"] }

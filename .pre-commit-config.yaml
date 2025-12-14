@@ -1,0 +1,18 @@
+repos:
+  - repo: https://github.com/commitizen-tools/commitizen
+    rev: v4.9.1
+    hooks:
+      - id: commitizen
+        stages: [commit-msg]
+  - repo: https://github.com/FeryET/pre-commit-rust
+    rev: v1.2.1
+    hooks:
+      - id: fmt
+      - id: cargo-check
+      - id: clippy
+      - id: test
+        stages:
+          - pre-push
+          - pre-merge-commit
+          - manual
+          - pre-commit

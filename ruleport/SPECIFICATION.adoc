@@ -1,0 +1,288 @@
+= Ruleport Language
+A configuration language for directing programs
+:toc:
+
+_Ruleport_ is a configuration language intended for defining sets of rules that
+other programs can use. It is primarily designed for configuration, ease of
+use, and more.
+
+== Synopsis
+
+Ruleport files, otherwise known as *rulesets*, allow configuring procedures.
+
+The following is a valid context:
+
+  {
+  #comment
+  none->/
+  enum->$Ok(1)
+  char->'a'
+  string->"example-context"
+  integer->2
+  float->1.0
+  bool->true
+  tuple->("name":1:true)
+  array->["eman":0:false]
+  next->{key->true:alt->false}
+  }
+
+Ruleport also accepts an alternative notation that is useful for readability:
+
+  {
+    # comment
+    none       -> /
+    char       -> 'a'
+    string     -> "example-context"
+    integer    -> 2
+    float      -> 1.0
+    bool       -> true
+    tuple      -> ( "name" 1 true )
+    array      -> [ "eman" 0 false ]
+    nested     -> { key -> true alt -> false }
+  }
+
+Ruleport rules are delimited either using whitespace, newlines, or colons. This
+includes any brackets surrounding the rules.
+
+  {none->/:char->'a' bool->true
+  nested->{key->true}}
+
+== Files
+
+Ruleport files use the `rules` file extension.
+
+== The Language
+
+=== Comments
+
+Comments are ignored by Ruleport. A line must start with a hash mark (otherwise
+known as a pound symbol or number sign) in order to count as a comment.
+
+  # This is ignored by Ruleport.
+
+=== Rules
+
+Rules are key-value pairs, where a value is a _data type_. A rule may be
+created using a `->` sequence of characters, otherwise known as an arrow
+operator:
+
+  {
+    rule_name->true
+  }
+
+A rule may additionally have any amount of whitespace surrounding the arrow
+operator on either side:
+
+  {
+    rule_one    ->    true
+    rule_two ->true
+    rule_three-> true
+  }
+
+==== Keys
+
+Keys are primarily used for link:#_subcontexts[subcontexts].
+
+When used in hash maps, keys can be any data type. This is not the case for
+structures, where they instead operate like identifiers and thus lack quotes
+and the ability to use certain characters.
+
+==== Values
+
+Values are associated with keys, thus forming key-value pairs. A value must be
+of a certain data type to be deserialized.
+
+=== Data Types
+
+==== None
+
+Wherever a value doesn't exist, a forward slash can be used to signify that the
+rule doesn't have a value.
+
+  none -> /
+
+==== Enumerators
+
+Enumerators reference any entry of the deserialized enumerator. An enumerator
+must be prefixed with a dollar sign, and supports a tuple or subcontext suffix
+for programming languages like https://rust-lang.org/[Rust] that can include
+additional values for enumerator variants.
+
+  enum        -> $Ok
+  tuple_enum  -> $Ok(1)
+  struct_enum -> $Ok{ one -> 1 }
+
+==== Characters
+
+A character is surrounded by single quotation marks:
+
+  char -> 'm'
+
+Common special characters may additionally be applied.
+
+  newline         -> '\n'
+  carriage_return -> '\r'
+  single_quote    -> '\''
+  double_quote    -> '\"'
+
+==== Strings
+
+Strings compose a sequence of characters together, and are instead surrounded
+by double quotation marks.
+
+  string -> "Hello, World!"
+
+Strings have the additional capability that they may also support
+interpolation with values from other rules, creating format strings. For a rule
+value to be interpolated, its rule name must be surrounded by a hash mark and
+curly brackets at the location where interpolation should occur.
+
+  name          -> "World Sphinx"
+  format_string -> "Hello, #{name}!"
+
+==== Integers
+
+Integers may be created using numerical digits.
+
+  one     -> 1
+  ten     -> 10
+  hundred -> 100
+
+==== Floats
+
+Floating point numbers are created similarly to integers, but include a decimal
+point.
+
+  one      -> 1.0
+  tenth    -> 0.1
+  hundreth -> 0.01
+
+The singular requirement for a value to be considered a float is the decimal
+point, where only one decimal point can exist; any digits may be completely
+ignored.
+
+  one       -> 1.
+  tenth     -> .1
+  hundredth -> .01
+  # Setting a float to zero can even be done using only a single decimal point.
+  zero      -> .
+
+==== Booleans
+
+Booleans can either be `true` or `false` as values, being formatted similarly
+to keys.
+
+  true_key  -> true
+  false_key -> false
+
+=== Iterables
+
+Iterables are a generic term to refer to tuples, arrays, and subcontexts at
+once. Iterables are data types; however, they have the special capability of
+containing other values. Each value is associated with an _element_ that a
+programming language can use.
+
+Every iterable has a delimiter between each element, including any brackets.
+Any amount of whitespace can be used as a delimiter like with the arrow
+operators, but a singular colon may optionally be used, as well as a generic
+newline.
+
+  tuple          -> (1:true:'a')
+  pretty_tuple   -> ( 1 true 'a' )
+  prettier_tuple -> (
+    1
+    true
+    'a'
+  )
+
+In fact, most Ruleport rulesets are all some kind of iterable.
+
+A special behavior of iterables in regards to string interpolation is that
+their elements may be referred to using the dot operator. However, physically
+interpolating the entire iterable is intentionally impossible in order to
+maintain consistency for formatting the string.
+
+  tuple      -> ( "World" )
+  array      -> [ "Saxophone" ]
+  subcontext -> { last_name -> "Jam" }
+  string     -> "Hello, #{tuple.0} #{array.0} #{subcontext.last_name}!"
+
+All iterables can be nested with each other.
+
+  nested_tuple      -> ( (1 0) [1 0] { one -> 1 zero -> 0 } )
+  nested_array      -> [ (1 0) [1 0] { one -> 1 zero -> 0 } ]
+  nested_subcontext -> { tuple -> (1 0) array -> (1 0) subcontext -> { one -> 1 zero -> 0 } }
+
+==== Tuples
+
+Tuples are surrounded in parentheses and operate under the same conditions as
+their deserialized counterpart:
+
+  tuple -> ("Hello, World!":true)
+
+==== Arrays
+
+Arrays in Ruleport are synonymous for both fixed-size arrays and vectors. They
+work the same as tuples, but instead use square brackets.
+
+  array -> ["Hello, World!":true]
+
+==== Subcontexts
+
+Subcontexts store rules of their own; in fact, most files will already be
+subcontexts of their own through the use of brackets. A subcontext can be
+created using angle brackets:
+
+  subcontext -> {hello->"Hello, World!":bool->true}
+
+Elements can be referred to using their key when performing string
+interpolation.
+
+  subcontext -> { name -> "World" }
+  string     -> "Hello, #{subcontext.name}!"
+
+== FAQ
+
+=== Why Should I Use Ruleport?
+
+Ruleport features a roughly similar structure to the INI file format, but
+changes some aspects to provide overall feature parity with most programming
+languages.
+
+For starters, Ruleport is easy to generate and to read. It uses arrow operators
+for assignment to allow readability instead of the thicker equals sign. Keys
+explicitly lack any formatting on their own to avoid confusion and to increase
+the speed of serialization, even if partially.
+
+Ruleport also allows programs to avoid performing certain options on their own.
+For example, string interpolation with other rules is supported by the
+specification using standard https://www.ruby-lang.org/[Ruby]-like syntax out
+of the box. What this allows for is avoiding manual string interpolation from
+the consumer of a Ruleport file.
+
+Finally, Ruleport files can be considered _short_ in the sense that the content
+per line can be shrunk to reduce file size. Whitespace is ignored nearly all of
+the time with only some exceptions, which may be useful for files that contain
+very short serialized data as a whole. Some of the alternative ways to declare
+a certain feature of a ruleset can allow for "familiar" rulesets, such as with
+colon delimiters like with environment variables.
+
+=== Why Was Ruleport Created?
+
+Ruleport was created as the successor to a prior, simple plain-text format used
+by the https://codeberg.org/r6915ee/mask-hx/[`mask-hx`] version manager for
+https://haxe.org/[Haxe]. The only contents stored by this file format was a
+single Haxe version number string that was used for version resolution.
+
+Ruleport was written from scratch to support the capabilities of the successor
+of `mask-hx`, https://codeberg.org/r6915ee/verstring/[`verstring`], which is
+not limited to Haxe and supports a lot of overall metadata. Most features of
+Ruleport are required by `verstring` to operate correctly, such as subcontexts
+and overall compatibility with the https://serde.rs/data-model.html[`serde`
+data model].
+
+Other configuration file formats, such as https://json.org/[JSON], were not
+chosen in order to maintain the raw simplicity of the `mask-hx` configuration
+file format while adding additional features that are necessary for `verstring`
+to operate independently from the Ruleport https://serde.rs/[`serde`]
+implementation.
