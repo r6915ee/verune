@@ -30,9 +30,9 @@ impl Default for PrettyConfig {
 }
 
 pub struct Serializer {
-    pub output: String,
+    output: String,
     mode: SerializerMode,
-    pub pretty: PrettyConfig,
+    pretty: PrettyConfig,
 }
 
 macro_rules! write_types {
