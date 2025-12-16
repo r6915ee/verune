@@ -142,11 +142,14 @@ curly brackets at the location where interpolation should occur.
 
 ==== Integers
 
-Integers may be created using numerical digits.
+Integers may be created using numerical digits. There's no restriction on how
+the actual string for an integer may look in regards to the specification, but
+this behavior may vary based on implementation.
 
   one     -> 1
   ten     -> 10
   hundred -> 100
+  alt     -> 001
 
 ==== Floats
 
