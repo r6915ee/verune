@@ -451,15 +451,26 @@ mod test {
         compat: HashMap<&'static str, [u8; 3]>,
     }
 
+    #[derive(Serialize, Clone)]
+    struct Tree {
+        peer: Option<Box<Tree>>,
+    }
+
+    impl Default for Plugin {
+        fn default() -> Plugin {
+            Plugin {
+                name: "my-plugin".into(),
+                version: [0, 1, 0],
+                api_compat: [0, 1, 0],
+                distribution: DistributionMode::Stable,
+                compat: HashMap::new(),
+            }
+        }
+    }
+
     #[test]
     fn serialize_simple_struct() {
-        let data: Plugin = Plugin {
-            name: "my-plugin".into(),
-            version: [1, 0, 0],
-            api_compat: [1, 0, 1],
-            distribution: DistributionMode::Stable,
-            compat: HashMap::new(),
-        };
+        let data: Plugin = Plugin::default();
         println!("{}", to_string(&data).unwrap());
     }
 
@@ -473,33 +484,24 @@ mod test {
     #[test]
     fn custom_pretty() {
         let data: Plugin = Plugin {
-            name: "my-plugin".into(),
             version: [2, 2, 1],
             api_compat: [2, 0, 0],
             distribution: DistributionMode::Alpha,
-            compat: [].into(),
+            ..Default::default()
         };
         println!(
             "{}",
-            to_string_pretty(
-                &data,
-                PrettyConfig {
-                    delimiter: DelimiterType::Newline,
-                    indent_width: 4,
-                }
-            )
-            .unwrap()
+            to_string_pretty(&data, PrettyConfig::hierarchy()).unwrap()
         );
     }
 
     #[test]
     fn tuple_variant() {
         let data: Plugin = Plugin {
-            name: "my-plugin".into(),
             version: [1, 0, 0],
             api_compat: [2, 0, 0],
             distribution: DistributionMode::Nightly(12, 13, 25),
-            compat: [].into(),
+            ..Default::default()
         };
         println!("{}", to_string(&data).unwrap());
     }
@@ -532,5 +534,70 @@ mod test {
             changelog: "Added \"switch\" subcommand",
         };
         println!("{}", to_string(&distribution).unwrap());
+    }
+
+    #[test]
+    fn nested_pretty_hashmaps() {
+        let mut map: HashMap<(u8, bool), HashMap<&str, u8>> = HashMap::new();
+        map.insert((1, false), HashMap::new());
+        map.get_mut(&(1, false)).unwrap().insert("test", 4);
+        println!(
+            "{}",
+            to_string_pretty(&map, PrettyConfig::hierarchy()).unwrap()
+        );
+    }
+
+    #[test]
+    fn nested_egg() {
+        let mut egg: HashMap<bool, HashMap<bool, u8>> = HashMap::new();
+        egg.insert(false, HashMap::new());
+        egg.insert(true, HashMap::new());
+        egg.get_mut(&false).unwrap().insert(false, 8);
+        egg.get_mut(&false).unwrap().insert(true, 4);
+        egg.get_mut(&true).unwrap().insert(false, 8);
+        egg.get_mut(&true).unwrap().insert(true, 4);
+        println!(
+            "{}",
+            to_string_pretty(&egg, PrettyConfig::hierarchy()).unwrap()
+        );
+    }
+
+    #[test]
+    fn booklet() {
+        let booklet: Vec<Plugin> = vec![Plugin::default()];
+        println!(
+            "{}",
+            to_string_pretty(&booklet, PrettyConfig::hierarchy()).unwrap()
+        );
+    }
+
+    #[test]
+    fn nested_struct() {
+        let tree: Tree = Tree {
+            peer: Some(Box::new(Tree { peer: None })),
+        };
+        println!(
+            "{}",
+            to_string_pretty(&tree, PrettyConfig::hierarchy()).unwrap()
+        );
+    }
+
+    #[test]
+    fn tuple_of_maps() {
+        let mut tuple: (HashMap<bool, u8>, HashMap<u8, bool>) = (HashMap::new(), HashMap::new());
+        tuple.0.insert(false, 1);
+        println!("{}", to_string(&tuple).unwrap());
+    }
+
+    #[test]
+    fn vec_of_structs() {
+        let mut duplicates: Vec<Tree> = Vec::with_capacity(6);
+        for _ in 0..6 {
+            duplicates.push(Tree {
+                peer: Some(Box::new(Tree { peer: None })),
+            });
+            duplicates.push(Tree { peer: None });
+        }
+        println!("{}", to_string(&duplicates).unwrap());
     }
 }
