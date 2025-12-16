@@ -6,6 +6,7 @@ use serde::{Serialize, ser};
 enum SerializerMode {
     Normal,
     Key,
+    Map,
 }
 
 #[derive(PartialEq)]
@@ -33,6 +34,7 @@ pub struct Serializer {
     output: String,
     mode: SerializerMode,
     pretty: PrettyConfig,
+    indent_tracking: u16,
 }
 
 macro_rules! write_types {
@@ -55,6 +57,7 @@ pub fn to_string<T: Serialize>(value: &T) -> Result<String> {
         output: String::new(),
         mode: SerializerMode::Normal,
         pretty: PrettyConfig::default(),
+        indent_tracking: 0,
     };
     value.serialize(&mut serializer)?;
     Ok(serializer.output)
@@ -65,6 +68,7 @@ pub fn to_string_pretty<T: Serialize>(value: &T, pretty: PrettyConfig) -> Result
         output: String::new(),
         mode: SerializerMode::Normal,
         pretty,
+        indent_tracking: 0,
     };
     value.serialize(&mut serializer)?;
     Ok(serializer.output)
@@ -227,6 +231,8 @@ impl ser::Serializer for &mut Serializer {
 
     fn serialize_map(self, _len: Option<usize>) -> Result<Self::SerializeMap> {
         self.output += "{";
+        self.mode = SerializerMode::Map;
+        self.indent_tracking += 1;
         Ok(self)
     }
 
@@ -305,17 +311,20 @@ macro_rules! serialize_key {
     };
 }
 
+fn create_indent(serializer: &mut Serializer) -> String {
+    let mut indent: String = String::new();
+    for _ in 0..serializer.pretty.indent_width as u16 * serializer.indent_tracking {
+        indent.push(' ');
+    }
+    indent
+}
+
 macro_rules! indents {
     ($x: expr) => {
-        if !$x.output.ends_with('{') || $x.pretty.delimiter == DelimiterType::Newline {
-            $x.output += delimiter!($x);
-        }
         if $x.pretty.delimiter == DelimiterType::Newline {
-            let mut indent: String = String::new();
-            for _ in 0..$x.pretty.indent_width {
-                indent.push(' ');
-            }
-            $x.output += indent.as_str();
+            let indent_string: String = create_indent($x);
+            let indent: &str = indent_string.as_str();
+            $x.output += indent;
         }
     };
 }
@@ -325,17 +334,31 @@ impl ser::SerializeMap for &mut Serializer {
     type Error = Error;
 
     fn serialize_key<T: ?Sized + Serialize>(&mut self, key: &T) -> Result<()> {
+        if !self.output.ends_with('{') || self.pretty.delimiter == DelimiterType::Newline {
+            self.output += delimiter!(self);
+        }
+        self.mode = SerializerMode::Key;
         indents!(self);
         key.serialize(&mut **self)
     }
 
     fn serialize_value<T: ?Sized + Serialize>(&mut self, value: &T) -> Result<()> {
+        self.mode = SerializerMode::Normal;
         self.output += "->";
         value.serialize(&mut **self)
     }
 
     fn end(self) -> Result<Self::Ok> {
-        self.output += "}";
+        self.indent_tracking -= 1;
+        let ending: String = if self.mode == SerializerMode::Map
+            || self.pretty.delimiter != DelimiterType::Newline
+        {
+            "}".into()
+        } else {
+            format!("\n{}}}", create_indent(self))
+        };
+        self.output += ending.as_str();
+        self.mode = SerializerMode::Normal;
         Ok(())
     }
 }
@@ -348,6 +371,9 @@ impl ser::SerializeStruct for &mut Serializer {
     where
         T: ?Sized + Serialize,
     {
+        if !self.output.ends_with('{') || self.pretty.delimiter == DelimiterType::Newline {
+            self.output += delimiter!(self);
+        }
         indents!(self);
         serialize_key!(self, key);
         self.output += "->";
@@ -355,11 +381,16 @@ impl ser::SerializeStruct for &mut Serializer {
     }
 
     fn end(self) -> Result<()> {
-        self.output += if self.pretty.delimiter == DelimiterType::Newline {
-            "\n}"
+        self.indent_tracking -= 1;
+        let ending: String = if self.mode == SerializerMode::Map
+            || self.pretty.delimiter != DelimiterType::Newline
+        {
+            "}".into()
         } else {
-            "}"
+            format!("\n{}}}", create_indent(self))
         };
+        self.output += ending.as_str();
+        self.mode = SerializerMode::Normal;
         Ok(())
     }
 }
