@@ -30,6 +30,16 @@ impl Default for PrettyConfig {
     }
 }
 
+impl PrettyConfig {
+    pub fn hierarchy() -> PrettyConfig {
+        PrettyConfig {
+            delimiter: DelimiterType::Newline,
+            indent_width: 4,
+            ..Default::default()
+        }
+    }
+}
+
 pub struct Serializer {
     output: String,
     mode: SerializerMode,
