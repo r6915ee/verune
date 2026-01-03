@@ -7,7 +7,7 @@ fn handle_commands() -> ArgMatches {
         .arg(
             arg!(-c --config "The configuration to use")
                 .action(ArgAction::Set)
-                .value_name("RULESET"),
+                .value_name("CONFIG"),
         )
         .subcommand(
             Command::new("check")
