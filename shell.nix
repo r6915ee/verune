@@ -2,7 +2,7 @@
   pkgs ? import <nixpkgs> { },
 }:
 (pkgs.buildFHSEnv {
-  name = "verstring";
+  name = "verune";
   targetPkgs =
     pkgs: with pkgs; [
       gcc

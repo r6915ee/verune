@@ -24,7 +24,7 @@ fn main() {
     let matches: ArgMatches = handle_commands();
     let error_status: (i32, &str, bool) = (
         1,
-        "No subcommand was passed to verstring; for a list of subcommands, please use \"verstring help\"",
+        "No subcommand was passed to verune; for a list of subcommands, please use \"verstring help\"",
         false,
     );
 
@@ -33,9 +33,9 @@ fn main() {
     }
 
     if error_status.2 {
-        println!("verstring: {}", error_status.1);
+        println!("{}: {}", env!("CARGO_BIN_NAME"), error_status.1);
     } else if error_status.0 != 0 {
-        eprintln!("verstring: {}", error_status.1);
+        eprintln!("{}: {}", env!("CARGO_BIN_NAME"), error_status.1);
     }
     exit(error_status.0);
 }
