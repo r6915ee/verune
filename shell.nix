@@ -15,6 +15,5 @@
       just-lsp
       just-formatter
       pre-commit
-      asciidoctor-with-extensions
     ];
 }).env

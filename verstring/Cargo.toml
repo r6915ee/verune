@@ -5,7 +5,3 @@ edition = "2024"
 
 [dependencies]
 clap = { version = "4.5.53", features = ["cargo"] }
-ruleport = { version = "0.1.0", path = "../ruleport" }
-
-[dev-dependencies]
-ruleport = { version = "0.1.0", path = "../ruleport" }
