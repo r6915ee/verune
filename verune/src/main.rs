@@ -1,4 +1,5 @@
 use clap::{Arg, ArgAction, ArgMatches, Command, arg, command};
+use libver::{Runtime, RuntimeMetadata};
 use std::{collections::HashMap, fs::write, process::exit};
 
 fn handle_commands() -> ArgMatches {
@@ -98,27 +99,90 @@ fn main() {
         if config.is_none() {
             config = Some(HashMap::new());
         }
-        let mut config_data: HashMap<String, String> = config.unwrap();
         let runtime: String = matches.get_one::<String>("RUNTIME").unwrap().to_string();
         let version: String = matches.get_one::<String>("VERSION").unwrap().to_string();
-        config_data.insert(runtime.clone(), version.clone());
-        if let Ok(data) = ron::to_string(&config_data) {
-            error_status = match write(config_path, data) {
-                Ok(_) => (
-                    0,
-                    format!(
-                        "Successfully switched runtime \"{}\" to version {}",
-                        runtime, version
+        let mut potential_error: Option<(i32, String, bool)> = None;
+        error_status = if matches.get_flag("skip-check") || {
+            match Runtime::new(runtime.clone()) {
+                Ok(data) => data.get_safe_version(version.to_string()).is_ok(),
+                Err(e) => {
+                    potential_error = Some((
+                        1,
+                        format!("Could not find runtime \"{}\": {}", runtime, e),
+                        false,
+                    ));
+                    false
+                }
+            }
+        } {
+            let mut config_data: HashMap<String, String> = config.unwrap();
+            config_data.insert(runtime.clone(), version.to_string());
+            if let Ok(data) = ron::to_string(&config_data) {
+                match write(config_path, data) {
+                    Ok(_) => (
+                        0,
+                        format!(
+                            "Successfully switched runtime \"{}\" to version {}",
+                            runtime, version
+                        ),
+                        true,
                     ),
-                    true,
-                ),
-                Err(e) => (
+                    Err(e) => (
+                        1,
+                        format!("Could not write to configuration file: {}", e),
+                        false,
+                    ),
+                }
+            } else {
+                (
                     1,
-                    format!("Could not write to configuration file: {}", e),
+                    "Could not safely serialize configuration file".to_string(),
                     false,
+                )
+            }
+        } else if let Some(error) = potential_error {
+            error
+        } else {
+            (
+                2,
+                format!(
+                    "Runtime \"{}\" version {} could not be found",
+                    runtime, version
                 ),
-            };
-        }
+                false,
+            )
+        };
+    } else if let Some(matches) = matches.subcommand_matches("template") {
+        let runtime: String = matches.get_one::<String>("RUNTIME").unwrap().to_string();
+        error_status = match Runtime::get_runtime(runtime.as_str()) {
+            Ok(mut buf) => {
+                buf.push("meta.ron");
+                let template: RuntimeMetadata = RuntimeMetadata::default();
+                let template_contents: String =
+                    ron::ser::to_string_pretty(&template, ron::ser::PrettyConfig::default())
+                        .unwrap();
+                match write(buf, template_contents) {
+                    Ok(_) => (
+                        0,
+                        format!("Successfully wrote template for runtime \"{}\"", runtime),
+                        true,
+                    ),
+                    Err(e) => (
+                        1,
+                        format!(
+                            "Error when writing template for runtime \"{}\": {}",
+                            runtime, e
+                        ),
+                        false,
+                    ),
+                }
+            }
+            Err(e) => (
+                1,
+                format!("Could not fetch runtime \"{}\": {}", runtime, e),
+                false,
+            ),
+        };
     }
 
     if error_status.2 {
