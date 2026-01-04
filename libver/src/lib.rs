@@ -60,6 +60,21 @@ impl Runtime {
         buf.push(version);
         Ok(buf)
     }
+
+    pub fn get_safe_version(&self, version: String) -> IoResult<PathBuf> {
+        let path: PathBuf = self.get_version(version.to_string())?;
+        if path.try_exists()? {
+            Ok(path)
+        } else {
+            Err(Error::new(
+                ErrorKind::NotFound,
+                format!(
+                    "Version {} for runtime {} was not found",
+                    version, self.name
+                ),
+            ))
+        }
+    }
 }
 
 pub fn parse_config<T: AsRef<str>>(path: T) -> IoResult<HashMap<String, String>> {
