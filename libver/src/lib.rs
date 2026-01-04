@@ -36,7 +36,7 @@ impl Runtime {
             Err(_) => Err(Error::new(
                 ErrorKind::InvalidData,
                 format!(
-                    "Metadata file for runtime {} is not valid runtime metadata",
+                    "Metadata file for runtime \"{}\" is not valid runtime metadata",
                     name
                 ),
             )),
@@ -75,7 +75,7 @@ impl Runtime {
             Err(Error::new(
                 ErrorKind::NotFound,
                 format!(
-                    "Version {} for runtime {} was not found",
+                    "Version {} for runtime \"{}\" was not found",
                     version, self.name
                 ),
             ))
