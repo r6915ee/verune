@@ -83,31 +83,35 @@ impl Runtime {
     }
 }
 
-pub fn parse_config<T: AsRef<str>>(path: T) -> IoResult<HashMap<String, String>> {
-    let data: String = read_to_string(path.as_ref())?;
-    match ron::from_str::<HashMap<String, String>>(data.as_str()) {
-        Ok(map) => Ok(map),
-        Err(_) => Err(Error::new(
-            ErrorKind::InvalidData,
-            "Configuration file is invalid",
-        )),
+pub mod conf {
+    use crate::*;
+    use std::io::{Error, ErrorKind, Result as IoResult};
+    pub fn parse<T: AsRef<str>>(path: T) -> IoResult<HashMap<String, String>> {
+        let data: String = read_to_string(path.as_ref())?;
+        match ron::from_str::<HashMap<String, String>>(data.as_str()) {
+            Ok(map) => Ok(map),
+            Err(_) => Err(Error::new(
+                ErrorKind::InvalidData,
+                "Configuration file is invalid",
+            )),
+        }
     }
-}
 
-pub fn unsafe_collect(data: HashMap<String, String>) -> HashMap<Runtime, String> {
-    let mut parsed: HashMap<Runtime, String> = HashMap::new();
-    for (name, value) in data.iter() {
-        let runtime: Runtime = Runtime::unsafe_new(name.to_string());
-        parsed.insert(runtime, value.to_string());
+    pub fn unsafe_collect(data: HashMap<String, String>) -> HashMap<Runtime, String> {
+        let mut parsed: HashMap<Runtime, String> = HashMap::new();
+        for (name, value) in data.iter() {
+            let runtime: Runtime = Runtime::unsafe_new(name.to_string());
+            parsed.insert(runtime, value.to_string());
+        }
+        parsed
     }
-    parsed
-}
 
-pub fn collect_config(data: HashMap<String, String>) -> IoResult<HashMap<Runtime, String>> {
-    let mut parsed: HashMap<Runtime, String> = HashMap::new();
-    for (name, value) in data.iter() {
-        let runtime: Runtime = Runtime::new(name.to_string())?;
-        parsed.insert(runtime, value.to_string());
+    pub fn collect(data: HashMap<String, String>) -> IoResult<HashMap<Runtime, String>> {
+        let mut parsed: HashMap<Runtime, String> = HashMap::new();
+        for (name, value) in data.iter() {
+            let runtime: Runtime = Runtime::new(name.to_string())?;
+            parsed.insert(runtime, value.to_string());
+        }
+        Ok(parsed)
     }
-    Ok(parsed)
 }

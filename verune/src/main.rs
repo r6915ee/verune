@@ -91,12 +91,12 @@ fn main() {
     } else {
         ".ver.ron"
     };
-    let mut config: Option<HashMap<String, String>> = libver::parse_config(config_path).ok();
+    let mut config: Option<HashMap<String, String>> = libver::conf::parse(config_path).ok();
 
     if matches.subcommand_matches("check").is_some() {
         verify_config!(config);
         let config_data: HashMap<String, String> = config.unwrap();
-        let data: HashMap<Runtime, String> = libver::unsafe_collect(config_data);
+        let data: HashMap<Runtime, String> = libver::conf::unsafe_collect(config_data);
         let mut should_error: bool = false;
         for (runtime, version) in data.iter() {
             #[allow(unused_must_use)]
