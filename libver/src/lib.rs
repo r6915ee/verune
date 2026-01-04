@@ -20,6 +20,13 @@ pub struct Runtime {
 }
 
 impl Runtime {
+    pub fn unsafe_new(name: String) -> Runtime {
+        Runtime {
+            name,
+            metadata: RuntimeMetadata::default(),
+        }
+    }
+
     pub fn new(name: String) -> IoResult<Runtime> {
         let mut buf: PathBuf = Runtime::get_runtime(&name)?;
         buf.push("meta.ron");
@@ -85,6 +92,15 @@ pub fn parse_config<T: AsRef<str>>(path: T) -> IoResult<HashMap<String, String>>
             "Configuration file is invalid",
         )),
     }
+}
+
+pub fn unsafe_collect(data: HashMap<String, String>) -> HashMap<Runtime, String> {
+    let mut parsed: HashMap<Runtime, String> = HashMap::new();
+    for (name, value) in data.iter() {
+        let runtime: Runtime = Runtime::unsafe_new(name.to_string());
+        parsed.insert(runtime, value.to_string());
+    }
+    parsed
 }
 
 pub fn collect_config(data: HashMap<String, String>) -> IoResult<HashMap<Runtime, String>> {
