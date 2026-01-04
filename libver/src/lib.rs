@@ -87,10 +87,9 @@ pub fn parse_config<T: AsRef<str>>(path: T) -> IoResult<HashMap<String, String>>
     }
 }
 
-pub fn collect_config<T: AsRef<str>>(path: T) -> IoResult<HashMap<Runtime, String>> {
-    let config: HashMap<String, String> = parse_config(path)?;
+pub fn collect_config(data: HashMap<String, String>) -> IoResult<HashMap<Runtime, String>> {
     let mut parsed: HashMap<Runtime, String> = HashMap::new();
-    for (name, value) in config.iter() {
+    for (name, value) in data.iter() {
         let runtime: Runtime = Runtime::new(name.to_string())?;
         parsed.insert(runtime, value.to_string());
     }
