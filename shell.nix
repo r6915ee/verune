@@ -15,5 +15,6 @@
       just-lsp
       just-formatter
       pre-commit
+      yaml-language-server
     ];
 }).env
