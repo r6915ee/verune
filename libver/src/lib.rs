@@ -10,8 +10,7 @@ use std::{
 #[derive(PartialEq, Eq, Hash, Deserialize, Serialize)]
 pub struct RuntimeMetadata {
     pub display_name: String,
-    pub default_exec: String,
-    pub default_pkg: String,
+    pub search_paths: Vec<String>,
 }
 
 #[derive(PartialEq, Eq, Hash)]
