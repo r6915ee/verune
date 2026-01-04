@@ -1,6 +1,6 @@
 use clap::{Arg, ArgAction, ArgMatches, Command, arg, command};
 use libver::{Runtime, RuntimeMetadata};
-use std::{collections::HashMap, fs::write, process::exit};
+use std::{collections::HashMap, env, fs::write, process::exit};
 
 fn handle_commands() -> ArgMatches {
     command!()
@@ -54,6 +54,7 @@ fn handle_commands() -> ArgMatches {
                         .trailing_var_arg(true),
                 ),
         )
+        // Will be replaced with an interactive metadata subcommand that allows the same behavior.
         .subcommand(
             Command::new("template")
                 .about("Create template metadata for a runtime")
@@ -173,6 +174,25 @@ fn main() {
                 false,
             )
         };
+    } else if let Some(matches) = matches.subcommand_matches("scope") {
+        let mut args: Vec<String> = Vec::new();
+        if let Some(list) = matches.get_many::<String>("COMMAND") {
+            for i in list {
+                args.push(i.to_string());
+            }
+        }
+        let _command: String = if args.is_empty() {
+            if let Ok(cmd) = env::var("SHELL") {
+                cmd
+            } else if cfg!(windows) {
+                "cmd".into()
+            } else {
+                "sh".into()
+            }
+        } else {
+            args[0].to_string()
+        };
+        todo!()
     } else if let Some(matches) = matches.subcommand_matches("template") {
         let runtime: String = matches.get_one::<String>("RUNTIME").unwrap().to_string();
         error_status = match Runtime::get_runtime(runtime.as_str()) {
