@@ -35,6 +35,30 @@ fn handle_commands() -> ArgMatches {
                 .arg(arg!(<RUNTIME> "The runtime to switch"))
                 .arg(arg!(<VERSION> "The version to switch to")),
         )
+        .subcommand(
+            Command::new("scope")
+                .about("Run a command within a scope")
+                .long_about(
+                    "This subcommand creates a child process with a modified $PATH. \
+                    This $PATH will simply have the directories of each runtime version \
+                    prepended to it so that it can find the executables in that path first. \
+                    By default, the subcommand will attempt to use the command specified \
+                    in $SHELL, but it's possible to specify additional commands.",
+                )
+                .disable_help_flag(true)
+                .arg(
+                    arg!([COMMAND]... "The command and its arguments to run")
+                        .value_delimiter(' ')
+                        .allow_hyphen_values(true)
+                        .trailing_var_arg(true),
+                ),
+        )
+        .subcommand(
+            Command::new("template")
+                .about("Create template metadata for a runtime")
+                .long_about("This subcommand simply creates the default metadata for a runtime, nothing more.")
+                .arg(arg!(<RUNTIME> "The runtime to create a template for")),
+        )
         .get_matches()
 }
 
