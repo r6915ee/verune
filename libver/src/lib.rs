@@ -7,7 +7,7 @@ use std::{
     path::PathBuf,
 };
 
-#[derive(PartialEq, Eq, Hash, Deserialize, Serialize)]
+#[derive(PartialEq, Default, Eq, Hash, Deserialize, Serialize)]
 pub struct RuntimeMetadata {
     pub display_name: String,
     pub search_paths: Vec<String>,
