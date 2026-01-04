@@ -94,7 +94,28 @@ fn main() {
 
     if matches.subcommand_matches("check").is_some() {
         verify_config!(config);
-        todo!("Unimplemented command")
+        let config_data: HashMap<String, String> = config.unwrap();
+        let data: HashMap<Runtime, String> = libver::unsafe_collect(config_data);
+        let mut should_error: bool = false;
+        for (runtime, version) in data.iter() {
+            #[allow(unused_must_use)]
+            runtime.get_safe_version(version.to_string()).map_err(|e| {
+                should_error = true;
+                eprintln!("{}: {}: {}", env!("CARGO_BIN_NAME"), runtime.name, e)
+            });
+        }
+        error_status = if should_error {
+            (
+                1,
+                format!(
+                    "Issues above must be resolved to safely continue using {}",
+                    env!("CARGO_BIN_NAME")
+                ),
+                false,
+            )
+        } else {
+            (0, "All runtimes are properly installed".into(), true)
+        };
     } else if let Some(matches) = matches.subcommand_matches("switch") {
         if config.is_none() {
             config = Some(HashMap::new());
