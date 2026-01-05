@@ -100,12 +100,12 @@ fn main() {
         false,
     );
 
-    let config_path: &str = if let Some(path) = matches.get_one::<&str>("config") {
-        path
+    let config_path: String = if let Some(path) = matches.get_one::<String>("config") {
+        path.to_string()
     } else {
-        ".ver.ron"
+        ".ver.ron".into()
     };
-    let mut config: Option<HashMap<String, String>> = libver::conf::parse(config_path).ok();
+    let mut config: Option<HashMap<String, String>> = libver::conf::parse(&config_path).ok();
 
     if matches.subcommand_matches("check").is_some() {
         verify_config!(config);
