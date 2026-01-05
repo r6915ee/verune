@@ -102,6 +102,8 @@ fn main() {
 
     let config_path: String = if let Some(path) = matches.get_one::<String>("config") {
         path.to_string()
+    } else if let Ok(file) = env::var("VER_CONFIG") {
+        file
     } else {
         ".ver.ron".into()
     };
