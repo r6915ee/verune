@@ -9,7 +9,6 @@ use std::{
 
 fn handle_commands() -> ArgMatches {
     command!()
-        .arg(arg!(-g --global "Use the global configuration").action(ArgAction::SetTrue))
         .arg(
             arg!(-c --config "The configuration to use")
                 .action(ArgAction::Set)
