@@ -5,6 +5,7 @@ description = "Basic runtime version management library"
 edition = "2024"
 keywords = ["version", "development", "runtime"]
 categories = ["config", "development-tools"]
+license = "MIT OR Apache-2.0"
 
 [dependencies]
 ron = "0.12.0"
