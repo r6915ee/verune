@@ -1,6 +1,3 @@
-[RON]: (https://github.com/ron-rs/ron/)
-[Bash]: (https://www.gnu.org/software/bash/)
-
 # `verune`
 
 > _Dead simple, generic runtime version manager_
@@ -52,8 +49,8 @@ directory. A simple way to look at this design would be a tree:
 ```
 
 Runtime metadata can be declared using `meta.ron` files, which are in the
-[RON][RON] format. The format in particular is similar to _JSON_, but
-introduces some changes that make readability easier.
+[RON](https://github.com/ron-rs/ron/) format. The format in particular is
+similar to _JSON_, but introduces some changes that make readability easier.
 
 Assuming we've chosen a sample as our first runtime to install, the first step
 is to create its associated directory under the runtime directory. Then, all we
@@ -111,10 +108,10 @@ verune switch runtime 1.0.0
 ```
 
 Normally, this will create and write to `.ver.ron`, which is where all runtime
-version information is stored using [RON][RON]. If we specify a version that is
-not installed, however, we get an error. If you're just looking to tell the
-program which version you want to use, you may do so by using the
-`-u`/`--skip-check` flag.
+version information is stored using [RON](https://github.com/ron-rs/ron/). If
+we specify a version that is not installed, however, we get an error. If you're
+just looking to tell the program which version you want to use, you may do so
+by using the `-u`/`--skip-check` flag.
 
 ```sh
 verune switch runtime 1.0.1 # Error!
@@ -139,8 +136,9 @@ verune switch runtime 1.0.0
 When you want to finally start using the runtimes you have in your
 configuration, you can use the `scope` subcommand to run a program that has
 access to each runtime's version directory. By default, this subcommand will
-use the system's command line shell (e.g. [Bash][Bash]), but other programs
-and even arguments can be spawned this way:
+use the system's command line shell (e.g.
+[Bash](https://www.gnu.org/software/bash/)), but other programs and even
+arguments can be spawned this way:
 
 ```sh
 verune scope
