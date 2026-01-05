@@ -113,11 +113,10 @@ fn main() {
         let data: HashMap<Runtime, String> = libver::conf::unsafe_collect(config_data);
         let mut should_error: bool = false;
         for (runtime, version) in data.iter() {
-            #[allow(unused_must_use)]
-            runtime.get_safe_version(version.to_string()).map_err(|e| {
+            if let Err(e) = runtime.get_safe_version(version.to_string()) {
                 should_error = true;
                 eprintln!("{}: {}: {}", env!("CARGO_BIN_NAME"), runtime.name, e)
-            });
+            }
         }
         error_status = if should_error {
             (
