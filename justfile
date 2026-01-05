@@ -31,12 +31,15 @@ test-out:
 lint:
     cargo clippy
 
+# Immediately generate the documentation without testing.
+doc-im:
+    cargo doc --no-deps --workspace
+
 # Test, and then generate the documentation.
-doc:
+doc: doc-im
     cargo test --doc
-    cargo doc --no-deps
+    cargo doc --no-deps --workspace
 
 # Trigger doc recipe, and open  in target/doc.
 view-docs: doc
     ${HTTP_SERVER} target/doc
-

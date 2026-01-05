@@ -1,3 +1,12 @@
+//! > *Basic runtime version management library*
+//!
+//! This is the documentation for `libver`, which is the main backbone for
+//! [`verune`](https://codeberg.org/r6915ee/verune).
+//!
+//! Please note that this documentation is fairly empty and does not contain a
+//! lot of information. To see how each method is used, please see the `verune`
+//! source code.
+
 use serde::{Deserialize, Serialize};
 use std::{
     collections::{HashMap, VecDeque},
@@ -8,12 +17,22 @@ use std::{
     process::Command,
 };
 
+/// Basic metadata representation for a [Runtime].
+///
+/// [Runtime]s will typically be composed of this struct in order to allow
+/// dependent crates to access additional data about a [Runtime], as well as
+/// access the search paths.
 #[derive(PartialEq, Default, Eq, Hash, Deserialize, Serialize)]
 pub struct RuntimeMetadata {
     pub display_name: String,
     pub search_paths: Vec<String>,
 }
 
+/// Basic I/O layer for a runtime.
+///
+/// This structure both contains data about a runtime and keeps track of its
+/// metadata. It provides various I/O operations on runtimes in a consistent
+/// manner.
 #[derive(PartialEq, Eq, Hash)]
 pub struct Runtime {
     pub name: String,
@@ -21,6 +40,7 @@ pub struct Runtime {
 }
 
 impl Runtime {
+    /// Creates a [Runtime] with default metadata options.
     pub fn unsafe_new(name: String) -> Runtime {
         Runtime {
             name,
@@ -28,6 +48,13 @@ impl Runtime {
         }
     }
 
+    /// Attempts to create a [Runtime].
+    ///
+    /// Note that this method can fail in the following cases:
+    ///
+    /// - The home directory is inaccessible
+    /// - The metadata file can't be read
+    /// - The metadata file can't be deserialized
     pub fn new(name: String) -> IoResult<Runtime> {
         let mut buf: PathBuf = Runtime::get_runtime(&name)?;
         buf.push("meta.ron");
@@ -44,6 +71,7 @@ impl Runtime {
         }
     }
 
+    /// Gets the root directory for a [Runtime], and returns it if successful.
     pub fn get_root() -> IoResult<PathBuf> {
         if let Some(mut home) = home_dir() {
             home.push(".ver");
@@ -56,18 +84,21 @@ impl Runtime {
         }
     }
 
+    /// Gets a [Runtime] directory, based on its name.
     pub fn get_runtime(name: &str) -> IoResult<PathBuf> {
         let mut buf: PathBuf = Runtime::get_root()?;
         buf.push(name);
         Ok(buf)
     }
 
+    /// Gets a version directory from the current [Runtime].
     pub fn get_version(&self, version: String) -> IoResult<PathBuf> {
         let mut buf: PathBuf = Runtime::get_runtime(&self.name)?;
         buf.push(version);
         Ok(buf)
     }
 
+    /// Checks if a version directory exists, returning it if it does.
     pub fn get_safe_version(&self, version: String) -> IoResult<PathBuf> {
         let path: PathBuf = self.get_version(version.to_string())?;
         if path.try_exists()? {
@@ -83,6 +114,8 @@ impl Runtime {
         }
     }
 
+    /// Gets the list of version search paths as relative paths to the version
+    /// directory, checking if each one exists.
     pub fn get_version_search_paths(&self, version: String) -> IoResult<Vec<PathBuf>> {
         let mut paths: Vec<PathBuf> = Vec::new();
         let version_dir: PathBuf = self.get_safe_version(version)?;
@@ -108,6 +141,8 @@ impl Runtime {
 pub mod conf {
     use crate::*;
     use std::io::{Error, ErrorKind, Result as IoResult};
+
+    /// Reads a configuration file, and then parses it.
     pub fn parse<T: AsRef<str>>(path: T) -> IoResult<HashMap<String, String>> {
         let data: String = read_to_string(path.as_ref())?;
         match ron::from_str::<HashMap<String, String>>(data.as_str()) {
@@ -119,6 +154,8 @@ pub mod conf {
         }
     }
 
+    /// Returns a transformed variant of a configuration file using
+    /// [Runtime::unsafe_new].
     pub fn unsafe_collect(data: HashMap<String, String>) -> HashMap<Runtime, String> {
         let mut parsed: HashMap<Runtime, String> = HashMap::new();
         for (name, value) in data.iter() {
@@ -128,6 +165,7 @@ pub mod conf {
         parsed
     }
 
+    /// Returns a transformed variant of a configuration file using [Runtime::new].
     pub fn collect(data: HashMap<String, String>) -> IoResult<HashMap<Runtime, String>> {
         let mut parsed: HashMap<Runtime, String> = HashMap::new();
         for (name, value) in data.iter() {
@@ -138,6 +176,12 @@ pub mod conf {
     }
 }
 
+/// Executes a program with an environment suited to various runtime versions.
+///
+/// This method is the main backbone for commands to run under version-managed
+/// scenarios. `args` can be used as both a way to specify the command and as
+/// a way to specify the arguments, though it will fallback to system defaults
+/// if `args` is empty.
 pub fn exec(mut args: VecDeque<String>, config: HashMap<Runtime, String>) -> IoResult<Command> {
     let mut cmd: Command = Command::new(if let Some(data) = args.pop_front() {
         data
