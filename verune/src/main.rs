@@ -15,7 +15,7 @@ fn handle_commands() -> ArgMatches {
                 .about("Checks all runtime versions for their existence")
                 .long_about(
                     "This subcommand performs generic version resolution, and then \
-                    identifies whether or not all of the runtime versions actually checks.",
+                    identifies whether or not all of the runtime versions actually exist.",
                 ),
         )
         .subcommand(
