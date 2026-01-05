@@ -57,15 +57,15 @@ Runtime metadata can be declared using `meta.ron` files, which are in the [RON]
 format. The format in particular is similar to _JSON_, but introduces some
 changes that make readability easier.
 
-Assuming we've chosen [Haxe] as our first runtime to install, the first step is
-to create its associated directory under the runtime directory. Then, all we
+Assuming we've chosen a sample as our first runtime to install, the first step
+is to create its associated directory under the runtime directory. Then, all we
 need to do is run `verune`'s `template` subcommand:
 
 ```sh
-verune template haxe
+verune template runtime
 ```
 
-This will create a template metadata file for us under `~/.ver/haxe/meta.ron`.
+This will create a template metadata file for us under `~/.ver/runtime/meta.ron`.
 This file contains the following:
 
 ```ron
