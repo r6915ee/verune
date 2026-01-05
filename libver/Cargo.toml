@@ -1,7 +1,10 @@
 [package]
 name = "libver"
 version = "0.1.0"
+description = "Basic runtime version management library"
 edition = "2024"
+keywords = ["version", "development", "runtime"]
+categories = ["config", "development-tools"]
 
 [dependencies]
 ron = "0.12.0"
