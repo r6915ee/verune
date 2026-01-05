@@ -1,6 +1,11 @@
 use clap::{Arg, ArgAction, ArgMatches, Command, arg, command};
-use libver::{Runtime, RuntimeMetadata};
-use std::{collections::HashMap, env, fs::write, process::exit};
+use libver::{Runtime, RuntimeMetadata, conf, exec};
+use std::{
+    collections::HashMap,
+    env,
+    fs::write,
+    process::{Stdio, exit},
+};
 
 fn handle_commands() -> ArgMatches {
     command!()
@@ -40,11 +45,20 @@ fn handle_commands() -> ArgMatches {
             Command::new("scope")
                 .about("Run a command within a scope")
                 .long_about(
-                    "This subcommand creates a child process with a modified $PATH. \
-                    This $PATH will simply have the directories of each runtime version \
-                    prepended to it so that it can find the executables in that path first. \
+                    "This subcommand creates a child process with a modified environment. \
+                    This environment inherits from the current program, but prepends the \
+                    $PATH environment variable with both the current version directory of \
+                    each runtime and its search paths, alongside setting the $VER_OVERRIDE \
+                    environment variable for tools like prompts to use. This subcommand is \
+                    useful for both general execution of compilers and interpreters, as well \
+                    as package managers, IDEs, and even more scenarios, making it the subcommand \
+                    with the most use.\n\n\
                     By default, the subcommand will attempt to use the command specified \
-                    in $SHELL, but it's possible to specify additional commands.",
+                    in $SHELL, but it's possible to specify different programs.\n\n\
+                    Do note that this subcommand will start the program in the modified \
+                    environment immediately. This means that it is possible to immediately \
+                    invoke runtimes using this method, which may be useful in some cases, \
+                    such as emulating aliases or shims in other version managers.",
                 )
                 .disable_help_flag(true)
                 .arg(
@@ -175,24 +189,45 @@ fn main() {
             )
         };
     } else if let Some(matches) = matches.subcommand_matches("scope") {
+        verify_config!(config);
         let mut args: Vec<String> = Vec::new();
         if let Some(list) = matches.get_many::<String>("COMMAND") {
             for i in list {
                 args.push(i.to_string());
             }
         }
-        let _command: String = if args.is_empty() {
-            if let Ok(cmd) = env::var("SHELL") {
-                cmd
-            } else if cfg!(windows) {
-                "cmd".into()
-            } else {
-                "sh".into()
-            }
-        } else {
-            args[0].to_string()
+        error_status = match conf::collect(config.unwrap()) {
+            Ok(config_data) => match exec(args.into(), config_data) {
+                Ok(mut cmd) => {
+                    match cmd
+                        .stdin(Stdio::inherit())
+                        .stdout(Stdio::inherit())
+                        .stderr(Stdio::inherit())
+                        .output()
+                    {
+                        Ok(output) => {
+                            if let Some(code) = output.status.code() {
+                                (
+                                    code,
+                                    "Successfully started program, but error was returned".into(),
+                                    false,
+                                )
+                            } else {
+                                (
+                                    143,
+                                    "Successfully started program, but program was interrupted"
+                                        .into(),
+                                    false,
+                                )
+                            }
+                        }
+                        Err(e) => (1, format!("Execution error: {}", e), false),
+                    }
+                }
+                Err(e) => (1, format!("Command error: {}", e), false),
+            },
+            Err(e) => (1, format!("Configuration error: {}", e), false),
         };
-        todo!()
     } else if let Some(matches) = matches.subcommand_matches("template") {
         let runtime: String = matches.get_one::<String>("RUNTIME").unwrap().to_string();
         error_status = match Runtime::get_runtime(runtime.as_str()) {

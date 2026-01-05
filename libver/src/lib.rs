@@ -1,10 +1,11 @@
 use serde::{Deserialize, Serialize};
 use std::{
-    collections::HashMap,
-    env::home_dir,
+    collections::{HashMap, VecDeque},
+    env::{self, VarError, home_dir},
     fs::read_to_string,
     io::{Error, ErrorKind, Result as IoResult},
     path::PathBuf,
+    process::Command,
 };
 
 #[derive(PartialEq, Default, Eq, Hash, Deserialize, Serialize)]
@@ -114,4 +115,63 @@ pub mod conf {
         }
         Ok(parsed)
     }
+}
+
+pub fn exec(mut args: VecDeque<String>, config: HashMap<Runtime, String>) -> IoResult<Command> {
+    let mut cmd: Command = Command::new(if let Some(data) = args.pop_front() {
+        data
+    } else if let Ok(shell) = env::var("SHELL") {
+        shell
+    } else if cfg!(windows) {
+        "cmd".into()
+    } else {
+        "sh".into()
+    });
+    let mut paths: Vec<PathBuf> = Vec::with_capacity(config.len());
+    for (runtime, version) in config.iter() {
+        let version_dir: PathBuf = runtime.get_safe_version(version.to_string())?;
+        paths.push(version_dir.clone());
+        for search_path in &runtime.metadata.search_paths {
+            let search_buf: PathBuf = search_path.into();
+            let mut proper_search_buf: PathBuf = version_dir.clone();
+            proper_search_buf.push(search_buf);
+            if proper_search_buf.try_exists()? {
+                paths.push(proper_search_buf);
+            } else {
+                return Err(Error::new(
+                    ErrorKind::NotFound,
+                    format!(
+                        "Search path \"{}\" does not exist",
+                        proper_search_buf.display()
+                    ),
+                ));
+            }
+        }
+    }
+    let path: Result<String, VarError> = env::var("PATH");
+    cmd.args(args)
+        .env("PATH", {
+            let mut iter = paths.iter();
+            let mut prefix: String = String::new();
+            if let Some(path) = iter.next()
+                && let Some(data) = path.to_str()
+            {
+                prefix.push_str(data);
+            }
+
+            let delim: char = if cfg!(windows) { ';' } else { ':' };
+            for path in iter {
+                if let Some(data) = path.to_str() {
+                    prefix.push(delim);
+                    prefix.push_str(data);
+                }
+            }
+            if let Ok(good_path) = path {
+                prefix.push(delim);
+                prefix.push_str(good_path.as_str());
+            }
+            prefix
+        })
+        .env("VER_OVERRIDE", "1");
+    Ok(cmd)
 }
