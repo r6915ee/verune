@@ -110,25 +110,29 @@ fn main() {
     if matches.subcommand_matches("check").is_some() {
         verify_config!(config);
         let config_data: HashMap<String, String> = config.unwrap();
-        let data: HashMap<Runtime, String> = libver::conf::unsafe_collect(config_data);
         let mut should_error: bool = false;
-        for (runtime, version) in data.iter() {
-            if let Err(e) = runtime.get_safe_version(version.to_string()) {
-                should_error = true;
-                eprintln!("{}: {}: {}", env!("CARGO_BIN_NAME"), runtime.name, e)
+        error_status = match conf::collect(config_data) {
+            Ok(data) => {
+                for (runtime, version) in data.iter() {
+                    if let Err(e) = runtime.get_version_search_paths(version.to_string()) {
+                        should_error = true;
+                        eprintln!("{}: {}: {}", env!("CARGO_BIN_NAME"), runtime.name, e)
+                    }
+                }
+                if should_error {
+                    (
+                        1,
+                        format!(
+                            "Issues above must be resolved to safely continue using {}",
+                            env!("CARGO_BIN_NAME")
+                        ),
+                        false,
+                    )
+                } else {
+                    (0, "All runtimes are properly installed".into(), true)
+                }
             }
-        }
-        error_status = if should_error {
-            (
-                1,
-                format!(
-                    "Issues above must be resolved to safely continue using {}",
-                    env!("CARGO_BIN_NAME")
-                ),
-                false,
-            )
-        } else {
-            (0, "All runtimes are properly installed".into(), true)
+            Err(e) => (1, format!("Configuration parsing error: {}", e), false),
         };
     } else if let Some(matches) = matches.subcommand_matches("switch") {
         if config.is_none() {

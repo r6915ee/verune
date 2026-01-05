@@ -82,6 +82,27 @@ impl Runtime {
             ))
         }
     }
+
+    pub fn get_version_search_paths(&self, version: String) -> IoResult<Vec<PathBuf>> {
+        let mut paths: Vec<PathBuf> = Vec::new();
+        let version_dir: PathBuf = self.get_safe_version(version)?;
+        for search_path in &self.metadata.search_paths {
+            let search_buf: PathBuf = search_path.into();
+            let proper_search_buf: PathBuf = version_dir.join(search_buf);
+            if proper_search_buf.try_exists()? {
+                paths.push(proper_search_buf);
+            } else {
+                return Err(Error::new(
+                    ErrorKind::NotFound,
+                    format!(
+                        "Search path \"{}\" does not exist",
+                        proper_search_buf.display()
+                    ),
+                ));
+            }
+        }
+        Ok(paths)
+    }
 }
 
 pub mod conf {
@@ -129,24 +150,8 @@ pub fn exec(mut args: VecDeque<String>, config: HashMap<Runtime, String>) -> IoR
     });
     let mut paths: Vec<PathBuf> = Vec::with_capacity(config.len());
     for (runtime, version) in config.iter() {
-        let version_dir: PathBuf = runtime.get_safe_version(version.to_string())?;
-        paths.push(version_dir.clone());
-        for search_path in &runtime.metadata.search_paths {
-            let search_buf: PathBuf = search_path.into();
-            let mut proper_search_buf: PathBuf = version_dir.clone();
-            proper_search_buf.push(search_buf);
-            if proper_search_buf.try_exists()? {
-                paths.push(proper_search_buf);
-            } else {
-                return Err(Error::new(
-                    ErrorKind::NotFound,
-                    format!(
-                        "Search path \"{}\" does not exist",
-                        proper_search_buf.display()
-                    ),
-                ));
-            }
-        }
+        paths.push(runtime.get_safe_version(version.to_string())?);
+        paths.extend(runtime.get_version_search_paths(version.to_string())?);
     }
     let path: Result<String, VarError> = env::var("PATH");
     cmd.args(args)
