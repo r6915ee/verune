@@ -18,5 +18,6 @@
       yaml-language-server
       git-cliff
       cargo-edit
+      commitizen
     ];
 }).env
