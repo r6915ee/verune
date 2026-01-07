@@ -231,7 +231,7 @@ pub fn exec<T: Into<VecDeque<String>>>(
         })
         .env("VER_SCOPE", {
             if let Ok(last_scope) = env::var("VER_SCOPE")
-                && let Ok(data) = last_scope.parse::<u8>()
+                && let Ok(data) = last_scope.parse::<usize>()
             {
                 data + 1
             } else {
