@@ -45,7 +45,7 @@ view-docs: doc
     ${HTTP_SERVER} target/doc
 
 # Bump the project version. Requires git-cliff and cargo-edit. First two parameters are passed to git-cliff as bump version types.
-bump main="" lib="" set-manifest-version="1":
+bump main="" lib="" set-manifest-version="1" use-git="1":
     #!/usr/bin/env sh
     bumped_vers=("{{ main }}" "{{ lib }}")
     include=("0" "1")
@@ -71,7 +71,7 @@ bump main="" lib="" set-manifest-version="1":
         fi
         (( count++ ))
     done
-    if [[ {{ set-manifest-version }} == "1" ]]
+    if [[ {{ set-manifest-version }} == "1" ]] && [[ {{ use-git }} == "1" ]]
     then
         git stash push . ":!*CHANGELOG.md" ":!*Cargo*"
         git add .
