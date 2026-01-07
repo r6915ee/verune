@@ -73,7 +73,8 @@ bump main="" lib="" set-manifest-version="1":
     done
     if [[ {{ set-manifest-version }} == "1" ]]
     then
-        git reset
-        git add CHANGELOG.md ./libver/CHANGELOG.md Cargo.lock Cargo.toml ./libver/Cargo.toml
+        git stash push . ":!*CHANGELOG.md" ":!*Cargo*"
+        git add .
         git commit -m "chore(release): prepare for v${main_ver}"
+        git stash pop
     fi
