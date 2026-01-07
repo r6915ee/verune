@@ -115,7 +115,7 @@ fn main() {
         error_status = match conf::collect(config_data) {
             Ok(data) => {
                 for (runtime, version) in data.iter() {
-                    if let Err(e) = runtime.get_version_search_paths(version.to_string()) {
+                    if let Err(e) = runtime.get_version_search_paths(version) {
                         should_error = true;
                         eprintln!("{}: {}: {}", env!("CARGO_BIN_NAME"), runtime.name, e)
                     }
@@ -144,7 +144,7 @@ fn main() {
         let mut potential_error: Option<(i32, String, bool)> = None;
         error_status = if matches.get_flag("skip-check") || {
             match Runtime::new(runtime.clone()) {
-                Ok(data) => data.get_safe_version(version.to_string()).is_ok(),
+                Ok(data) => data.get_safe_version(&version).is_ok(),
                 Err(e) => {
                     potential_error = Some((
                         1,
@@ -201,7 +201,7 @@ fn main() {
             }
         }
         error_status = match conf::collect(config.unwrap()) {
-            Ok(config_data) => match exec(args.into(), config_data) {
+            Ok(config_data) => match exec(args, config_data) {
                 Ok(mut cmd) => {
                     match cmd
                         .stdin(Stdio::inherit())
@@ -234,7 +234,7 @@ fn main() {
         };
     } else if let Some(matches) = matches.subcommand_matches("template") {
         let runtime: String = matches.get_one::<String>("RUNTIME").unwrap().to_string();
-        error_status = match Runtime::get_runtime(runtime.as_str()) {
+        error_status = match Runtime::get_runtime(&runtime) {
             Ok(mut buf) => {
                 buf.push("meta.ron");
                 let template: RuntimeMetadata = RuntimeMetadata::default();

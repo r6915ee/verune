@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 use std::{
     collections::{HashMap, VecDeque},
     env::{self, VarError, home_dir},
+    fmt::Display,
     fs::read_to_string,
     io::{Error, ErrorKind, Result as IoResult},
     path::PathBuf,
@@ -41,9 +42,9 @@ pub struct Runtime {
 
 impl Runtime {
     /// Creates a [Runtime] with default metadata options.
-    pub fn unsafe_new(name: String) -> Runtime {
+    pub fn unsafe_new<T: Display>(name: T) -> Runtime {
         Runtime {
-            name,
+            name: name.to_string(),
             metadata: RuntimeMetadata::default(),
         }
     }
@@ -55,12 +56,15 @@ impl Runtime {
     /// - The home directory is inaccessible
     /// - The metadata file can't be read
     /// - The metadata file can't be deserialized
-    pub fn new(name: String) -> IoResult<Runtime> {
+    pub fn new<T: Display>(name: T) -> IoResult<Runtime> {
         let mut buf: PathBuf = Runtime::get_runtime(&name)?;
         buf.push("meta.ron");
         let data: String = read_to_string(buf)?;
         match ron::from_str::<RuntimeMetadata>(data.as_str()) {
-            Ok(metadata) => Ok(Runtime { name, metadata }),
+            Ok(metadata) => Ok(Runtime {
+                name: name.to_string(),
+                metadata,
+            }),
             Err(_) => Err(Error::new(
                 ErrorKind::InvalidData,
                 format!(
@@ -85,21 +89,21 @@ impl Runtime {
     }
 
     /// Gets a [Runtime] directory, based on its name.
-    pub fn get_runtime(name: &str) -> IoResult<PathBuf> {
+    pub fn get_runtime<T: Display>(name: T) -> IoResult<PathBuf> {
         let mut buf: PathBuf = Runtime::get_root()?;
-        buf.push(name);
+        buf.push(name.to_string());
         Ok(buf)
     }
 
     /// Gets a version directory from the current [Runtime].
-    pub fn get_version(&self, version: String) -> IoResult<PathBuf> {
+    pub fn get_version<T: Display>(&self, version: T) -> IoResult<PathBuf> {
         let mut buf: PathBuf = Runtime::get_runtime(&self.name)?;
-        buf.push(version);
+        buf.push(version.to_string());
         Ok(buf)
     }
 
     /// Checks if a version directory exists, returning it if it does.
-    pub fn get_safe_version(&self, version: String) -> IoResult<PathBuf> {
+    pub fn get_safe_version<T: Display>(&self, version: T) -> IoResult<PathBuf> {
         let path: PathBuf = self.get_version(version.to_string())?;
         if path.try_exists()? {
             Ok(path)
@@ -116,7 +120,7 @@ impl Runtime {
 
     /// Gets the list of version search paths as relative paths to the version
     /// directory, checking if each one exists.
-    pub fn get_version_search_paths(&self, version: String) -> IoResult<Vec<PathBuf>> {
+    pub fn get_version_search_paths<T: Display>(&self, version: T) -> IoResult<Vec<PathBuf>> {
         let mut paths: Vec<PathBuf> = Vec::new();
         let version_dir: PathBuf = self.get_safe_version(version)?;
         for search_path in &self.metadata.search_paths {
@@ -182,8 +186,12 @@ pub mod conf {
 /// scenarios. `args` can be used as both a way to specify the command and as
 /// a way to specify the arguments, though it will fallback to system defaults
 /// if `args` is empty.
-pub fn exec(mut args: VecDeque<String>, config: HashMap<Runtime, String>) -> IoResult<Command> {
-    let mut cmd: Command = Command::new(if let Some(data) = args.pop_front() {
+pub fn exec<T: Into<VecDeque<String>>>(
+    args: T,
+    config: HashMap<Runtime, String>,
+) -> IoResult<Command> {
+    let mut deque: VecDeque<String> = args.into();
+    let mut cmd: Command = Command::new(if let Some(data) = deque.pop_front() {
         data
     } else if let Ok(shell) = env::var("SHELL") {
         shell
@@ -194,11 +202,11 @@ pub fn exec(mut args: VecDeque<String>, config: HashMap<Runtime, String>) -> IoR
     });
     let mut paths: Vec<PathBuf> = Vec::with_capacity(config.len());
     for (runtime, version) in config.iter() {
-        paths.push(runtime.get_safe_version(version.to_string())?);
-        paths.extend(runtime.get_version_search_paths(version.to_string())?);
+        paths.push(runtime.get_safe_version(version)?);
+        paths.extend(runtime.get_version_search_paths(version)?);
     }
     let path: Result<String, VarError> = env::var("PATH");
-    cmd.args(args)
+    cmd.args(deque)
         .env("PATH", {
             let mut iter = paths.iter();
             let mut prefix: String = String::new();
