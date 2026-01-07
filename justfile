@@ -43,3 +43,37 @@ doc: doc-im
 # Trigger doc recipe, and open  in target/doc.
 view-docs: doc
     ${HTTP_SERVER} target/doc
+
+# Bump the project version. Requires git-cliff and cargo-edit. First two parameters are passed to git-cliff as bump version types.
+bump main="" lib="" set-manifest-version="1":
+    #!/usr/bin/env sh
+    bumped_vers=("{{ main }}" "{{ lib }}")
+    include=("0" "1")
+    count=0
+    main_ver=""
+    for i in "${bumped_vers[@]}"
+    do
+        if [[ ${include[${count}]} == "0" ]]; then
+            ver=$(git cliff --bump $i --exclude-path "./libver/" --bumped-version)
+            git cliff --bump $i --unreleased --exclude-path "./libver/" -o ./CHANGELOG.md
+            if [[ {{ set-manifest-version }} == "1" ]]
+            then
+                main_ver=$(echo ${ver} | sed "s/v//g")
+                cargo set-version ${main_ver}
+            fi
+        else
+            ver=$(git cliff --bump $i --include-path "./libver/" --bumped-version)
+            git cliff --bump $i --unreleased --include-path "./libver/" -o ./libver/CHANGELOG.md
+            if [[ {{ set-manifest-version }} == "1" ]]
+            then
+                cargo set-version -p libver $(echo ${ver} | sed "s/v//g")
+            fi
+        fi
+        (( count++ ))
+    done
+    if [[ {{ set-manifest-version }} == "1" ]]
+    then
+        git reset
+        git add CHANGELOG.md ./libver/CHANGELOG.md Cargo.lock Cargo.toml ./libver/Cargo.toml
+        git commit -m "chore(release): prepare for v${main_ver}"
+    fi

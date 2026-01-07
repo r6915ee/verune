@@ -16,5 +16,7 @@
       just-formatter
       pre-commit
       yaml-language-server
+      git-cliff
+      cargo-edit
     ];
 }).env
