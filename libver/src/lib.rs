@@ -221,6 +221,17 @@ pub fn exec(mut args: VecDeque<String>, config: HashMap<Runtime, String>) -> IoR
             }
             prefix
         })
+        .env("VER_SCOPE", {
+            if let Ok(last_scope) = env::var("VER_SCOPE")
+                && let Ok(data) = last_scope.parse::<u8>()
+            {
+                data + 1
+            } else {
+                1
+            }
+            .to_string()
+        })
+        // $VER_OVERRIDE only remains for legacy purposes. It'll be removed in a later commit.
         .env("VER_OVERRIDE", "1");
     Ok(cmd)
 }
