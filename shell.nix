@@ -20,4 +20,7 @@
       cargo-edit
       commitizen
     ];
+  profile = ''
+    export RUST_BACKTRACE=1
+  '';
 }).env
