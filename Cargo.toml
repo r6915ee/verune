@@ -9,7 +9,7 @@ repository = "https://codeberg.org/r6915ee/verune"
 
 [package]
 name = "verune"
-version = "0.1.0"
+version = "0.2.0"
 description = "Dead simple, generic runtime version manager"
 edition = "2024"
 keywords = ["version", "development", "cli", "runtime"]
@@ -18,5 +18,5 @@ license = "MIT OR Apache-2.0"
 
 [dependencies]
 clap = { version = "4.5.53", features = ["cargo"] }
-libver = { version = "0.1.0", path = "./libver" }
+libver = { version = "0.2.0", path = "./libver" }
 ron = "0.12.0"
