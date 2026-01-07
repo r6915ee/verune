@@ -45,7 +45,7 @@ view-docs: doc
     ${HTTP_SERVER} target/doc
 
 # Bump the project version. Requires git-cliff and cargo-edit. First two parameters are passed to git-cliff as bump version types.
-bump main="" lib="" set-manifest-version="1" use-git="1":
+bump main="" lib="" set-manifest-version="1" use-git="1" git-tag="1":
     #!/usr/bin/env sh
     bumped_vers=("{{ main }}" "{{ lib }}")
     include=("0" "1")
@@ -77,4 +77,7 @@ bump main="" lib="" set-manifest-version="1" use-git="1":
         git add .
         git commit -m "chore(release): prepare for v${main_ver}"
         git stash pop
+        if [[ {{ git-tag }} == "1" ]]; then
+            git tag "v${main_ver}"
+        fi
     fi
