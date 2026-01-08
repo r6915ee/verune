@@ -1,11 +1,9 @@
-## [0.2.0] - 2026-01-07
+## [0.3.0] - 2026-01-08
 
 ### 🚀 Features
 
-- Modify $VER_SCOPE to show scope level when creating a command
-- Feat: replace various function parameters in libver with compatible
-generics
+- [**breaking**] Use proper Path struct when parsing configuration
 
-### 🐛 Bug Fixes
+### 🚜 Refactor
 
-- Make $VER_SCOPE compatibile with usize
+- [**breaking**] Remove $VER_OVERRIDE

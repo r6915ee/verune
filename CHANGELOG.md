@@ -1,16 +1,24 @@
-## [0.2.0] - 2026-01-07
+## [0.3.0] - 2026-01-08
 
 ### 🚀 Features
 
-- Feat: replace various function parameters in libver with compatible
-generics
+- Add --replace option
+- Add --overlay option
+- Add support for using $VERUNE_OVERLAYS to specify overlays
+
+### 🐛 Bug Fixes
+
+- Fix subcommand help message to replace verstring
+
+### 🚜 Refactor
+
+- Make config_path a PathBuf
+- [**breaking**] Remove $VER_OVERRIDE
+
+### 📚 Documentation
+
+- Add overlays section to readme
 
 ### ⚙️ Miscellaneous Tasks
 
-- Make every item of libver root accessible to verune
-- Configure just bump recipe
-- Update just bump to perform a stash
-- Manage commitizen hook manually
-- Set $RUST_BACKTRACE to 1 in nix shell
-- Add use-git parameter to just bump
-- Add git tag enabling to just bump
+- Overhaul just bump
