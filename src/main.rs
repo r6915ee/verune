@@ -120,19 +120,35 @@ fn main() {
     };
     let mut config: Option<HashMap<String, String>> = conf::parse(&config_path).ok();
 
+    macro_rules! config_merge {
+        ($x: expr) => {
+            let config_data: &mut HashMap<String, String> = config.as_mut().unwrap();
+            for i in $x {
+                if let Ok(parsed) = conf::parse(i) {
+                    for (runtime, version) in parsed.iter() {
+                        config_data.insert(runtime.to_string(), version.to_string());
+                    }
+                }
+            }
+        };
+    }
+
+    if let Ok(paths_string) = env::var("VERUNE_OVERLAYS") {
+        let paths: Vec<&str> = paths_string
+            .split(if cfg!(windows) { ";" } else { ":" })
+            .collect();
+        if config.is_none() {
+            config = Some(HashMap::with_capacity(paths.len()));
+        }
+        config_merge!(paths);
+    }
+
     if let Some(data) = matches.get_occurrences::<PathBuf>("overlay") {
         let configs: Vec<PathBuf> = data.map(Iterator::collect).collect();
         if config.is_none() {
             config = Some(HashMap::with_capacity(configs.len()));
         }
-        for i in &configs {
-            let config_data: &mut HashMap<String, String> = config.as_mut().unwrap();
-            if let Ok(parsed) = conf::parse(i) {
-                for (runtime, version) in parsed.iter() {
-                    config_data.insert(runtime.to_string(), version.to_string());
-                }
-            }
-        }
+        config_merge!(configs);
     }
 
     if let Some(data) = matches.get_occurrences::<String>("replace") {
@@ -140,8 +156,8 @@ fn main() {
         if config.is_none() {
             config = Some(HashMap::with_capacity(replacements.len()));
         }
+        let config_data: &mut HashMap<String, String> = config.as_mut().unwrap();
         for i in &replacements {
-            let config_data: &mut HashMap<String, String> = config.as_mut().unwrap();
             config_data.insert(i[0].to_string(), i[1].to_string());
         }
     }
