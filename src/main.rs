@@ -1,18 +1,19 @@
-use clap::{Arg, ArgAction, ArgMatches, Command, arg, command};
+use clap::{Arg, ArgAction, ArgMatches, Command, arg, command, value_parser};
 use libver::*;
 use std::{
     collections::HashMap,
     env,
     fs::write,
+    path::PathBuf,
     process::{Stdio, exit},
 };
 
 fn handle_commands() -> ArgMatches {
     command!()
         .arg(
-            arg!(-c --config "The configuration to use")
-                .action(ArgAction::Set)
-                .value_name("CONFIG"),
+            arg!(-c --config <FILE> "The configuration to use")
+                .required(false)
+                .value_parser(value_parser!(PathBuf)),
         )
         .subcommand(
             Command::new("check")
@@ -99,10 +100,10 @@ fn main() {
         false,
     );
 
-    let config_path: String = if let Some(path) = matches.get_one::<String>("config") {
-        path.to_string()
+    let config_path: PathBuf = if let Some(path) = matches.get_one::<PathBuf>("config") {
+        path.to_path_buf()
     } else if let Ok(file) = env::var("VER_CONFIG") {
-        file
+        file.into()
     } else {
         ".ver.ron".into()
     };
