@@ -144,10 +144,13 @@ impl Runtime {
 
 pub mod conf {
     use crate::*;
-    use std::io::{Error, ErrorKind, Result as IoResult};
+    use std::{
+        io::{Error, ErrorKind, Result as IoResult},
+        path::Path,
+    };
 
     /// Reads a configuration file, and then parses it.
-    pub fn parse<T: AsRef<str>>(path: T) -> IoResult<HashMap<String, String>> {
+    pub fn parse<T: AsRef<Path>>(path: T) -> IoResult<HashMap<String, String>> {
         let data: String = read_to_string(path.as_ref())?;
         match ron::from_str::<HashMap<String, String>>(data.as_str()) {
             Ok(map) => Ok(map),
