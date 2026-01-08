@@ -2,11 +2,6 @@
 members = ["libver"]
 resolver = "3"
 
-[workspace.package]
-authors = ["r6915ee <astergthefourth@gmail.com>"]
-homepage = "https://codeberg.org/r6915ee/verune"
-repository = "https://codeberg.org/r6915ee/verune"
-
 [package]
 name = "verune"
 version = "0.3.0"
@@ -15,6 +10,9 @@ edition = "2024"
 keywords = ["version", "development", "cli", "runtime"]
 categories = ["command-line-utilities", "config", "development-tools"]
 license = "MIT OR Apache-2.0"
+authors = ["r6915ee <astergthefourth@gmail.com>"]
+homepage = "https://codeberg.org/r6915ee/verune"
+repository = "https://codeberg.org/r6915ee/verune"
 
 [dependencies]
 clap = { version = "4.5.53", features = ["cargo"] }

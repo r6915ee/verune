@@ -6,6 +6,9 @@ edition = "2024"
 keywords = ["version", "development", "runtime"]
 categories = ["config", "development-tools"]
 license = "MIT OR Apache-2.0"
+authors = ["r6915ee <astergthefourth@gmail.com>"]
+homepage = "https://codeberg.org/r6915ee/verune"
+repository = "https://codeberg.org/r6915ee/verune"
 
 [dependencies]
 ron = "0.12.0"
