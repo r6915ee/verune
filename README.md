@@ -151,6 +151,50 @@ verune scope prog # Success!
 verune scope pkgman # Success!
 ```
 
+### Advanced Usage
+
+#### Overlays
+
+`verune` has support for _overlays_, a system in which the current
+configuration file gets merged with additional configurations specified through
+any _overlay inputs_. The main inputs available are the `--replace` and
+`--overlay` options, as well as the `VERUNE_OVERLAYS` environment variable.
+Each overlay is applied _by input_ in the sense that one input will need to
+finish applying before applying the next one.
+
+`--replace` is the simplest way to apply an overlay, and gets applied last.
+This option simply takes a runtime identifier and version number to apply, and
+can be repeated.
+
+```sh
+verune --replace lune 0.10.4 scope
+```
+
+`--overlay` is similar to `--replace`, being applied second. However, a
+configuration file can be feed to this option instead of a runtime identifier
+and version, being able to apply multiple changes at once.
+
+```sh
+verune --overlay .sec.ver.ron --overlay .thr.ver.ron scope
+```
+
+`VERUNE_OVERLAYS` essentially acts like a variant of the `PATH` environment
+variable, except it shares the same functionality as `--overlay`, being applied
+first. Paths are separated by the same delimiter used by `PATH` on the system,
+generally a semicolon (`;`) on Windows and a colon (`:`) otherwise.
+
+```sh
+# We assume we're using a UNIX-like system.
+export VERUNE_OVERLAYS=.sec.ver.ron:.thr.ver.ron
+verune scope
+```
+
+The overlays system allows multiple additional workflows that typically aren't
+possible with the rest of the subcommands. Overlays can make it easier to
+migrate between versions in some cases, as they're cheaper with less disk space
+usage. However, some may still prefer normal configurations for their ease of
+use and their friendliness with monorepos.
+
 ### Tips and Tricks
 
 - Running development tools in a `verune` scope is particularly useful for
