@@ -20,6 +20,11 @@ fn handle_commands() -> ArgMatches {
                 .action(ArgAction::Append)
                 .value_names(["RUNTIME", "VERSION"])
         )
+        .arg(
+            arg!(-o --overlay <FILE> "Overlay a configuration on top of the current one")
+                .required(false)
+                .value_parser(value_parser!(PathBuf))
+        )
         .subcommand(
             Command::new("check")
                 .about("Checks all runtime versions for their existence")
@@ -113,7 +118,22 @@ fn main() {
     } else {
         ".ver.ron".into()
     };
-    let mut config: Option<HashMap<String, String>> = libver::conf::parse(&config_path).ok();
+    let mut config: Option<HashMap<String, String>> = conf::parse(&config_path).ok();
+
+    if let Some(data) = matches.get_occurrences::<PathBuf>("overlay") {
+        let configs: Vec<PathBuf> = data.map(Iterator::collect).collect();
+        if config.is_none() {
+            config = Some(HashMap::with_capacity(configs.len()));
+        }
+        for i in &configs {
+            let config_data: &mut HashMap<String, String> = config.as_mut().unwrap();
+            if let Ok(parsed) = conf::parse(i) {
+                for (runtime, version) in parsed.iter() {
+                    config_data.insert(runtime.to_string(), version.to_string());
+                }
+            }
+        }
+    }
 
     if let Some(data) = matches.get_occurrences::<String>("replace") {
         let replacements: Vec<Vec<&String>> = data.map(Iterator::collect).collect();
