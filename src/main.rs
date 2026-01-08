@@ -58,7 +58,7 @@ fn handle_commands() -> ArgMatches {
                     "This subcommand creates a child process with a modified environment. \
                     This environment inherits from the current program, but prepends the \
                     $PATH environment variable with both the current version directory of \
-                    each runtime and its search paths, alongside setting the $VER_OVERRIDE \
+                    each runtime and its search paths, alongside setting the $VER_SCOPE \
                     environment variable for tools like prompts to use. This subcommand is \
                     useful for both general execution of compilers and interpreters, as well \
                     as package managers, IDEs, and even more scenarios, making it the subcommand \

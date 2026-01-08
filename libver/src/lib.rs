@@ -241,8 +241,6 @@ pub fn exec<T: Into<VecDeque<String>>>(
                 1
             }
             .to_string()
-        })
-        // $VER_OVERRIDE only remains for legacy purposes. It'll be removed in a later commit.
-        .env("VER_OVERRIDE", "1");
+        });
     Ok(cmd)
 }
