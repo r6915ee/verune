@@ -4,7 +4,7 @@ resolver = "3"
 
 [package]
 name = "verune"
-version = "0.3.0"
+version = "0.3.1"
 description = "Dead simple, generic runtime version manager"
 edition = "2024"
 keywords = ["version", "development", "cli", "runtime"]
@@ -16,5 +16,5 @@ repository = "https://codeberg.org/r6915ee/verune"
 
 [dependencies]
 clap = { version = "4.5.53", features = ["cargo"] }
-libver = { version = "0.3.0", path = "./libver" }
+libver = { version = "0.3.1", path = "./libver" }
 ron = "0.12.0"

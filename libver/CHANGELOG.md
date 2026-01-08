@@ -1,9 +1,5 @@
-## [0.3.0] - 2026-01-08
+## [0.3.1] - 2026-01-08
 
-### 🚀 Features
+### 💼 Other
 
-- [**breaking**] Use proper Path struct when parsing configuration
-
-### 🚜 Refactor
-
-- [**breaking**] Remove $VER_OVERRIDE
+- Move shared metadata to individual package sections in crates
