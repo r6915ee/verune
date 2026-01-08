@@ -44,8 +44,8 @@ doc: doc-im
 view-docs: doc
     ${HTTP_SERVER} target/doc
 
-# Bump the project version. Requires git-cliff and cargo-edit. First two parameters are passed to git-cliff as bump version types.
-bump main="" lib="" set-manifest-version="1" use-git="1" git-tag="1":
+# Bump the project version. Requires git-cliff, cargo-edit and sed. Use "none" to disable version bumping on libver.
+bump main="auto" lib="auto" set-manifest-version="a" use-git="a" git-tag="a":
     #!/usr/bin/env sh
     bumped_vers=("{{ main }}" "{{ lib }}")
     include=("0" "1")
@@ -53,31 +53,45 @@ bump main="" lib="" set-manifest-version="1" use-git="1" git-tag="1":
     main_ver=""
     for i in "${bumped_vers[@]}"
     do
-        if [[ ${include[${count}]} == "0" ]]; then
-            ver=$(git cliff --bump $i --exclude-path "./libver/" --bumped-version)
-            git cliff --bump $i --unreleased --exclude-path "./libver/" -o ./CHANGELOG.md
-            if [[ {{ set-manifest-version }} == "1" ]]
+        if [ "${i}" = "major" ]; then
+            i="minor"
+            echo "Both verune and libver follow 0ver version scheme and cannot use major version numbers"
+        fi
+        if [ "${include[${count}]}" = "0" ]; then
+            if [ "${i}" = "none" ]; then
+                i="auto"
+                echo "Only libver can be bumped using none parameter"
+            fi
+            ver=$(git cliff --bump $i --exclude-path "libver/" --bumped-version)
+            echo "verune: ${ver}"
+            git cliff --bump $i --unreleased --exclude-path "libver/" -o
+            if [ -n "{{ set-manifest-version }}" ]
             then
                 main_ver=$(echo ${ver} | sed "s/v//g")
-                cargo set-version ${main_ver}
+                # set-version searches through all crates without a package ID, so we need to explicitly specify it.
+                cargo set-version -p verune ${main_ver}
             fi
         else
-            ver=$(git cliff --bump $i --include-path "./libver/" --bumped-version)
-            git cliff --bump $i --unreleased --include-path "./libver/" -o ./libver/CHANGELOG.md
-            if [[ {{ set-manifest-version }} == "1" ]]
-            then
-                cargo set-version -p libver $(echo ${ver} | sed "s/v//g")
+            if [ "${i}" != "none" ]; then
+                ver=$(git cliff --bump $i --include-path "libver/" --bumped-version)
+                echo "libver: ${ver}"
+                git cliff --bump $i --unreleased --include-path "libver/" -o libver/CHANGELOG.md
+                if [ -n "{{ set-manifest-version }}" ]
+                then
+                    lib_ver=$(echo ${ver} | sed "s/v//g")
+                    cargo set-version -p libver ${lib_ver}
+                fi
             fi
         fi
         (( count++ ))
     done
-    if [[ {{ set-manifest-version }} == "1" ]] && [[ {{ use-git }} == "1" ]]
+    if [ -n "{{ set-manifest-version }}" ] && [ -n "{{ use-git }}" ]
     then
         git stash push . ":!*CHANGELOG.md" ":!*Cargo*"
         git add .
         git commit -m "chore(release): prepare for v${main_ver}"
         git stash pop
-        if [[ {{ git-tag }} == "1" ]]; then
+        if [ -n "{{ git-tag }}" ]; then
             git tag "v${main_ver}"
         fi
     fi
