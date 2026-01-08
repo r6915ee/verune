@@ -96,7 +96,8 @@ fn main() {
     let matches: ArgMatches = handle_commands();
     let mut error_status: (i32, String, bool) = (
         1,
-        "No subcommand was passed to verune; for a list of subcommands, please use \"verstring help\"".into(),
+        "No subcommand was passed to verune; for a list of subcommands, please use \"verune help\""
+            .into(),
         false,
     );
 
