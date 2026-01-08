@@ -13,7 +13,12 @@ fn handle_commands() -> ArgMatches {
         .arg(
             arg!(-c --config <FILE> "The configuration to use")
                 .required(false)
-                .value_parser(value_parser!(PathBuf)),
+                .value_parser(value_parser!(PathBuf))
+        )
+        .arg(
+            arg!(-r --replace "Replace an entry in the configuration for this session")
+                .action(ArgAction::Append)
+                .value_names(["RUNTIME", "VERSION"])
         )
         .subcommand(
             Command::new("check")
@@ -109,6 +114,17 @@ fn main() {
         ".ver.ron".into()
     };
     let mut config: Option<HashMap<String, String>> = libver::conf::parse(&config_path).ok();
+
+    if let Some(data) = matches.get_occurrences::<String>("replace") {
+        let replacements: Vec<Vec<&String>> = data.map(Iterator::collect).collect();
+        if config.is_none() {
+            config = Some(HashMap::with_capacity(replacements.len()));
+        }
+        for i in &replacements {
+            let config_data: &mut HashMap<String, String> = config.as_mut().unwrap();
+            config_data.insert(i[0].to_string(), i[1].to_string());
+        }
+    }
 
     if matches.subcommand_matches("check").is_some() {
         verify_config!(config);
