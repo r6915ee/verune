@@ -6,6 +6,7 @@
   targetPkgs =
     pkgs: with pkgs; [
       gcc
+      openssl
       rustc
       rustfmt
       clippy
