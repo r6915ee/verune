@@ -215,6 +215,8 @@ use and their friendliness with monorepos.
 - If you're not sure if your setup is ready for a project using `verune`, you
   can run the `check` subcommand to identify if it's safe to use `verune` and
   what issues there may be with your current setup.
+  - You may additionally use the `list` subcommand to see what specific
+    versions of each runtime are used by the project.
 - Project configuration files are **recommended** to place in version control.
   They are capable of supporting both organizations and individuals in using
   the exact same version of runtimes.
