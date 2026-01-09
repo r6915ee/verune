@@ -31,6 +31,10 @@ test-out:
 lint:
     cargo clippy
 
+# Trigger rustfmt.
+fmt:
+    cargo fmt --all
+
 # Immediately generate the documentation without testing.
 doc-im:
     cargo doc --no-deps --workspace
