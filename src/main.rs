@@ -17,7 +17,9 @@ fn handle_commands() -> ArgMatches {
         )
         .arg(
             arg!(-r --replace "Replace an entry in the configuration for this session")
+                .required(false)
                 .action(ArgAction::Append)
+                .global(true)
                 .value_names(["RUNTIME", "VERSION"])
         )
         .arg(
@@ -35,22 +37,30 @@ fn handle_commands() -> ArgMatches {
                 ),
         )
         .subcommand(
-            Command::new("switch")
-                .about("Switch a runtime's version")
+            Command::new("apply")
+                .about("Apply a change to the configuration")
                 .long_about(
-                    "This simply switches a runtime's version. By default, it \
-                    will check if the version is available and safe to use; this may be \
-                    avoided by using the --skip-check argument.",
+                    "This subcommand, by default, will switch the version of a runtime in the \
+                    configuration file. Before writing, however, it will check that **every** \
+                    version set is installed; this behavior may be avoided by using the --skip-check \
+                    flag.\n\n\
+                    Note that this subcommand by default will operate on a copy of the configuration \
+                    made before applying any overlays. To apply the changes made by overlays as well, \
+                    use the --full flag.",
                 )
                 .arg(
                     Arg::new("skip-check")
                         .short('u')
                         .long("skip-check")
-                        .help("Avoid validating the version's installation")
+                        .help("Avoid validating the versions' installation")
                         .action(ArgAction::SetTrue),
                 )
-                .arg(arg!(<RUNTIME> "The runtime to switch"))
-                .arg(arg!(<VERSION> "The version to switch to")),
+                .arg(
+                    arg!(-f --full "Switch using the full configuration, which includes overlays")
+                )
+                .arg(arg!([RUNTIME] "The runtime to switch").required_unless_present("full"))
+                .arg(arg!([VERSION] "The version to switch to").required_unless_present("full"))
+                .visible_alias("switch"),
         )
         .subcommand(
             Command::new("scope")
@@ -120,6 +130,14 @@ fn main() {
         ".ver.ron".into()
     };
     let mut config: Option<HashMap<String, String>> = conf::parse(&config_path).ok();
+    let config_copy: Option<HashMap<String, String>> = if let Some(switch) =
+        matches.subcommand_matches("apply")
+        && !switch.get_flag("full")
+    {
+        config.clone()
+    } else {
+        None
+    };
 
     macro_rules! config_merge {
         ($x: expr) => {
@@ -190,38 +208,81 @@ fn main() {
             }
             Err(e) => (1, format!("Configuration parsing error: {}", e), false),
         };
-    } else if let Some(matches) = matches.subcommand_matches("switch") {
-        if config.is_none() {
-            config = Some(HashMap::new());
-        }
-        let runtime: String = matches.get_one::<String>("RUNTIME").unwrap().to_string();
-        let version: String = matches.get_one::<String>("VERSION").unwrap().to_string();
-        let mut potential_error: Option<(i32, String, bool)> = None;
-        error_status = if matches.get_flag("skip-check") || {
-            match Runtime::new(runtime.clone()) {
-                Ok(data) => data.get_safe_version(&version).is_ok(),
-                Err(e) => {
-                    potential_error = Some((
+    } else if let Some(matches) = matches.subcommand_matches("apply") {
+        let mut config: HashMap<String, String> = if let Some(copy) = config_copy {
+            copy
+        } else {
+            config.unwrap_or_default()
+        };
+
+        error_status = 'errorable: {
+            if let Some(rt) = matches.get_one::<String>("RUNTIME").map(|x| x.to_string())
+                && let Some(ver) = matches.get_one::<String>("VERSION").map(|x| x.to_string())
+            {
+                config.insert(rt, ver);
+            }
+
+            if !matches.get_flag("skip-check") {
+                let mut runtime_errors: String = String::new();
+
+                macro_rules! conditional_expand {
+                    {true, $i: block} => {$i};
+                    {false, $i: block} => {};
+                }
+
+                macro_rules! runtime_check {
+                    ($runt: expr, $ver: expr, $nesc: tt) => {
+                        match Runtime::new($runt) {
+                            Ok(rt) => {
+                                if let Err(e) = rt.get_safe_version($ver) {
+                                    conditional_expand!($nesc, { runtime_errors.push('\n') });
+                                    runtime_errors.push_str(
+                                        format!("{}: {}: {}", env!("CARGO_BIN_NAME"), $runt, e)
+                                            .as_str(),
+                                    );
+                                }
+                            }
+                            Err(e) => {
+                                break 'errorable (
+                                    2,
+                                    format!("Could not find runtime \"{}\": {}", $runt, e),
+                                    false,
+                                );
+                            }
+                        }
+                    };
+                }
+                let mut iter = config.iter();
+                if let Some((runtime, version)) = iter.next() {
+                    runtime_check!(runtime, version, false);
+                }
+                for (runtime, version) in iter {
+                    runtime_check!(runtime, version, true);
+                }
+                if !runtime_errors.is_empty() {
+                    let rt_err_cl: String = runtime_errors.clone();
+                    runtime_errors.retain(|c| {
+                        if c == '\n'
+                            && let Some(index) = rt_err_cl.find(c)
+                            && index == 0
+                        {
+                            return false;
+                        }
+                        true
+                    });
+                    eprintln!("{}", runtime_errors);
+                    break 'errorable (
                         1,
-                        format!("Could not find runtime \"{}\": {}", runtime, e),
+                        "Issues above must be resolved in order to apply configuration changes"
+                            .into(),
                         false,
-                    ));
-                    false
+                    );
                 }
             }
-        } {
-            let mut config_data: HashMap<String, String> = config.unwrap();
-            config_data.insert(runtime.clone(), version.to_string());
-            if let Ok(data) = ron::to_string(&config_data) {
+
+            if let Ok(data) = ron::to_string(&config) {
                 match write(config_path, data) {
-                    Ok(_) => (
-                        0,
-                        format!(
-                            "Successfully switched runtime \"{}\" to version {}",
-                            runtime, version
-                        ),
-                        true,
-                    ),
+                    Ok(_) => (0, "Successfully switched configuration".into(), true),
                     Err(e) => (
                         1,
                         format!("Could not write to configuration file: {}", e),
@@ -231,21 +292,10 @@ fn main() {
             } else {
                 (
                     1,
-                    "Could not safely serialize configuration file".to_string(),
+                    "Could not safely serialize configuration into RON format".into(),
                     false,
                 )
             }
-        } else if let Some(error) = potential_error {
-            error
-        } else {
-            (
-                2,
-                format!(
-                    "Runtime \"{}\" version {} could not be found",
-                    runtime, version
-                ),
-                false,
-            )
         };
     } else if let Some(matches) = matches.subcommand_matches("scope") {
         verify_config!(config);
