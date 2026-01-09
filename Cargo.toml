@@ -4,7 +4,7 @@ resolver = "3"
 
 [package]
 name = "verune"
-version = "0.3.1"
+version = "0.3.2"
 description = "Dead simple, generic runtime version manager"
 edition = "2024"
 keywords = ["version", "development", "cli", "runtime"]
