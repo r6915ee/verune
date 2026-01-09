@@ -7,6 +7,9 @@
     pkgs: with pkgs; [
       gcc
       openssl
+      libyaml
+      zlib
+      libffi
       rustc
       rustfmt
       clippy

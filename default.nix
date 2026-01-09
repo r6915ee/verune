@@ -1,8 +1,11 @@
 {
   pkgs ? import <nixpkgs> { },
-  # It's so common as a dependency that OpenSSL and libffi are included by default in extraPkgs.
+  # These are included by default because they're very common dependencies across runtimes overall.
   extraPkgs ? with pkgs; [
     openssl
+    libyaml
+    zlib
+    libffi
   ],
 }:
 let
