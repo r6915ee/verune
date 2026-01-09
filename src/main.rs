@@ -37,6 +37,11 @@ fn handle_commands() -> ArgMatches {
                 ),
         )
         .subcommand(
+            Command::new("list")
+                .about("Lists all version in the configuration")
+                .long_about("This simply lists all runtime versions in the configuration.")
+        )
+        .subcommand(
             Command::new("apply")
                 .about("Apply a change to the configuration")
                 .long_about(
@@ -208,6 +213,13 @@ fn main() {
             }
             Err(e) => (1, format!("Configuration parsing error: {}", e), false),
         };
+    } else if matches.subcommand_matches("list").is_some() {
+        verify_config!(config);
+        let config_data: HashMap<String, String> = config.unwrap();
+        for (runtime, version) in config_data.iter() {
+            println!("{}: {}", runtime, version);
+        }
+        error_status = (0, "".into(), false);
     } else if let Some(matches) = matches.subcommand_matches("apply") {
         let mut config: HashMap<String, String> = if let Some(copy) = config_copy {
             copy
