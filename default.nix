@@ -1,6 +1,9 @@
 {
   pkgs ? import <nixpkgs> { },
-  extraPkgs ? [ ],
+  # It's so common as a dependency that OpenSSL and libffi are included by default in extraPkgs.
+  extraPkgs ? with pkgs; [
+    openssl
+  ],
 }:
 let
   mainPkg = pkgs.rustPlatform.buildRustPackage {
