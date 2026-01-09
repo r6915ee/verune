@@ -23,6 +23,7 @@ fn handle_commands() -> ArgMatches {
         .arg(
             arg!(-o --overlay <FILE> "Overlay a configuration on top of the current one")
                 .required(false)
+                .action(ArgAction::Append)
                 .value_parser(value_parser!(PathBuf))
         )
         .subcommand(
