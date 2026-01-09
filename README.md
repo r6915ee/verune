@@ -101,10 +101,10 @@ Now we can get into setting up projects.
 
 Assuming we use the prior runtime example with `prog` and `pkgman`, we know
 that our project uses version v1.0.0 of that runtime. We can create a project
-configuration using the `switch` subcommand:
+configuration using the `apply` subcommand:
 
 ```sh
-verune switch runtime 1.0.0
+verune apply runtime 1.0.0
 ```
 
 Normally, this will create and write to `.ver.ron`, which is where all runtime
@@ -114,11 +114,11 @@ just looking to tell the program which version you want to use, you may do so
 by using the `-u`/`--skip-check` flag.
 
 ```sh
-verune switch runtime 1.0.1 # Error!
-verune switch -u runtime 1.0.1 # Success
+verune apply runtime 1.0.1 # Error!
+verune apply -u runtime 1.0.1 # Success
 ```
 
-Of course, it's better to use the former approach to switching versions, as
+Of course, it's better to use the former approach to applying versions, as
 it's simply better to be safe than sorry in the case of version management.
 
 An interesting thing to note is that `.ver.ron` isn't the only possible
@@ -128,9 +128,9 @@ variable, which allow for using multiple configuration files in a single
 project:
 
 ```sh
-verune -c .sec.ver.ron switch runtime 1.0.0
+verune -c .sec.ver.ron apply runtime 1.0.0
 export VER_CONFIG=.thr.ver.ron
-verune switch runtime 1.0.0
+verune apply runtime 1.0.0
 ```
 
 When you want to finally start using the runtimes you have in your
@@ -187,6 +187,18 @@ generally a semicolon (`;`) on Windows and a colon (`:`) otherwise.
 # We assume we're using a UNIX-like system.
 export VERUNE_OVERLAYS=.sec.ver.ron:.thr.ver.ron
 verune scope
+unset VERUNE_OVERLAYS
+```
+
+Additionally, overlays can be used with the `apply` subcommand to write the
+overlayed configuration with the `apply` subcommand's `--full` flag. The
+`--full` flag is necessary, because the subcommand will use a non-overlayed
+copy of the configuration without it. This also makes the arguments for
+typically setting which version to switch to optional, which can simplify
+certain overlay-related workflows even more.
+
+```sh
+verune --overlay .sec.ver.ron apply --full
 ```
 
 The overlays system allows multiple additional workflows that typically aren't
