@@ -1,12 +1,11 @@
-## [0.3.2] - 2026-01-09
+## [0.4.0] - 2026-01-09
 
-### 🐛 Bug Fixes
+### 🚀 Features
 
-- Make overlay option appendable
+- [**breaking**] Replace switch with apply subcommand
+- Add list subcommand
 
-### ⚙️ Miscellaneous Tasks
+### 📚 Documentation
 
-- Add openssl to targetPkgs in shell.nix
-- Add openssl to extraPkgs in default.nix
-- Add various extra packages to nix files
-- Add just fmt
+- Mention apply subcommand in readme
+- Mention list subcommand in readme
