@@ -1,4 +1,1 @@
-/target
-*.ver.ron
-*.html
-result
+.zig-cache
