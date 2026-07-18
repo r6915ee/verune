@@ -2,6 +2,11 @@
 
 > _Dead simple, generic runtime version manager_
 
+> [!WARNING]
+> The README below applies for the prior Rust version of `verune`. `verune` is
+> currently being reimplemented in Zig and is guaranteed to have some semantics
+> changed, so this README is outdated.
+
 Software development often involves the usage of runtimes, such as compilers or
 interpreters, that allow building software systems. Often, these runtimes are
 managed using system package managers.
