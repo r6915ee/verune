@@ -49,12 +49,8 @@ pub fn open(io: Io, home: Io.Dir, home_path: []const u8, name: []const u8) OpenE
     };
 }
 
-pub fn version(self: Self, version_num: []const u8) Io.Dir.OpenError!Io.Dir {
-    return self.dir.openDir(self.io, version_num, .{});
-}
-
 /// Modifies `map` in place with the contents of a runtime's `environ` file.
-pub fn environ(self: *Self, version_num: []const u8, allocator: std.mem.Allocator, map: *std.process.Environ.Map) EnvironError!void {
+pub fn environ(self: *Self, version: []const u8, allocator: std.mem.Allocator, map: *std.process.Environ.Map) EnvironError!void {
     const environ_file = self.dir.openFile(self.io, "environ", .{}) catch |err| {
         self.environ_file_err = err;
         return;
@@ -66,7 +62,7 @@ pub fn environ(self: *Self, version_num: []const u8, allocator: std.mem.Allocato
     while (parser.next()) |kv| {
         const path_d = try std.mem.replaceOwned(u8, allocator, kv.value, "::", if (builtin.os.tag == .windows) ";" else ":");
         defer allocator.free(path_d);
-        const version_d = try std.mem.replaceOwned(u8, allocator, path_d, "${version}", version_num);
+        const version_d = try std.mem.replaceOwned(u8, allocator, path_d, "${version}", version);
         defer allocator.free(version_d);
         var sentinel = try std.mem.replaceOwned(u8, allocator, version_d, "${home}", self.home_path);
         defer allocator.free(sentinel);
@@ -122,44 +118,6 @@ test "RuntimeGrazer.open: metadataless" {
     defer tdir.close(tio);
     try tdir.createDirPath(tio, "runtime");
     try std.testing.expectError(Io.File.OpenError.FileNotFound, open(tio, tdir, &tdir_root.sub_path, "runtime"));
-}
-
-test "RuntimeGrazer.version: success" {
-    const tdir_root = std.testing.tmpDir(.{});
-    const tdir = tdir_root.dir;
-    defer tdir.close(tio);
-    const rtdir = try tdir.createDirPathOpen(tio, "runtime", .{});
-    defer rtdir.close(tio);
-    _ = try rtdir.createDirPath(tio, "0.1.0");
-
-    const metadata = try rtdir.createFile(tio, "metadata", .{});
-    var metadata_buf: [16]u8 = undefined;
-    var metadata_writer = metadata.writer(tio, &metadata_buf);
-    try metadata_writer.interface.writeAll("display_name=Generic\nsearch_paths=abc");
-    try metadata_writer.flush();
-    var rt = try open(tio, tdir, &tdir_root.sub_path, "runtime");
-    defer rt.deinit();
-
-    const vr = try rt.version("0.1.0");
-    vr.close(tio);
-}
-
-test "RuntimeGrazer.version: fail" {
-    const tdir_root = std.testing.tmpDir(.{});
-    const tdir = tdir_root.dir;
-    defer tdir.close(tio);
-    const rtdir = try tdir.createDirPathOpen(tio, "runtime", .{});
-    defer rtdir.close(tio);
-
-    const metadata = try rtdir.createFile(tio, "metadata", .{});
-    var metadata_buf: [16]u8 = undefined;
-    var metadata_writer = metadata.writer(tio, &metadata_buf);
-    try metadata_writer.interface.writeAll("display_name=Generic\nsearch_paths=abc");
-    try metadata_writer.flush();
-    var rt = try open(tio, tdir, &tdir_root.sub_path, "runtime");
-    defer rt.deinit();
-
-    try std.testing.expectError(Io.Dir.OpenError.FileNotFound, rt.version("0.1.0"));
 }
 
 test "RuntimeGrazer.environ: success" {
