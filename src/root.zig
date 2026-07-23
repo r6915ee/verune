@@ -4,6 +4,7 @@ const Io = std.Io;
 
 pub const KV = @import("libver/KV.zig");
 pub const RuntimeGrazer = @import("libver/RuntimeGrazer.zig");
+pub const ScopeSentinel = @import("libver/ScopeSentinel.zig");
 
 test {
     std.testing.refAllDecls(@This());
