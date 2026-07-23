@@ -1,6 +1,8 @@
 const std = @import("std");
 const builtin = @import("builtin");
 const Io = std.Io;
+
+/// Manages environments for scopes.
 const Self = @This();
 
 const KV = @import("KV.zig");
@@ -11,6 +13,8 @@ conf: ConfFormat,
 pub const ConfFormat = std.StringHashMap([]const u8);
 pub const EnvironError = Io.Dir.RealPathError || RuntimeGrazer.OpenError || std.process.Environ.CreateMapError || RuntimeGrazer.EnvironError;
 
+/// Initialize a `ScopeSentinel`, using a [`Reader`](#std.Io.Reader) that goes through the `.version` file.
+/// Remember to run `deinit` once you're done!
 pub fn open(reader: *Io.Reader, allocator: std.mem.Allocator) std.mem.Allocator.Error!Self {
     var conf: ConfFormat = .init(allocator);
     errdefer conf.deinit();
@@ -24,6 +28,10 @@ pub fn open(reader: *Io.Reader, allocator: std.mem.Allocator) std.mem.Allocator.
     };
 }
 
+/// Go through every runtime in the configuration and load its environment variables into `map`.
+///
+/// Note that any changes to `map` are destructive, as this function won't restore `map` to its
+/// previous state when an error is propagated.
 pub fn environ(self: Self, io: Io, allocator: std.mem.Allocator, home: Io.Dir, home_path: []const u8, map: *std.process.Environ.Map) EnvironError!void {
     var conf_iter = self.conf.iterator();
     while (conf_iter.next()) |conf_item| {
@@ -33,6 +41,7 @@ pub fn environ(self: Self, io: Io, allocator: std.mem.Allocator, home: Io.Dir, h
     }
 }
 
+/// Deinitialize the configuration hashmap.
 pub fn deinit(self: *Self) void {
     self.conf.deinit();
 }

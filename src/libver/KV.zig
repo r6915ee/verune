@@ -1,4 +1,4 @@
-//! A key-value pair.
+/// A key-value pair.
 const Self = @This();
 
 const std = @import("std");
@@ -7,9 +7,11 @@ const Io = std.Io;
 key: []const u8,
 value: []const u8,
 
+/// Iterates through a reader of key-value pairs.
 pub const KVIterator = struct {
     reader: *Io.Reader,
 
+    /// Go to the next key-value pair in the iterator.
     pub fn next(self: *KVIterator) ?Self {
         const key = self.reader.takeDelimiter('=') catch {
             return null;
@@ -25,6 +27,7 @@ pub const KVIterator = struct {
     }
 };
 
+/// Createss an iterator used to parse key-value pairs.
 pub fn parse(reader: *Io.Reader) KVIterator {
     return .{
         .reader = reader,

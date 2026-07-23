@@ -3,16 +3,16 @@ const builtin = @import("builtin");
 const Io = std.Io;
 
 /// The main filesystem layer to runtimes.
-///
-/// This is responsible for all filesystem interactions for runtimes.
 const Self = @This();
 
 const KV = @import("KV.zig");
 
+/// The name of the runtime in the filesystem. This is equivalent to `open`'s `name` parameter.
 unique_name: []const u8,
 metadata: Metadata,
 io: Io,
 dir: Io.Dir,
+/// The path to the runtime home. Use this instead of [`Io.Dir.realPath`](#std.Io.Dir.realPath).
 home_path: []const u8,
 environ_file_err: ?Io.File.OpenError = null,
 
@@ -20,9 +20,11 @@ pub const OpenError = Io.Dir.OpenError || Io.File.OpenError;
 pub const EnvironError = std.mem.Allocator.Error || error{NoValue};
 
 pub const Metadata = struct {
+    /// A name that refers to the runtime. This is primarily useful for user interfaces to `libver`.
     display_name: []const u8,
 };
 
+/// Creates a `RuntimeGrazer` for use, handling metadata accordingly.
 pub fn open(io: Io, home: Io.Dir, home_path: []const u8, name: []const u8) OpenError!Self {
     const dir = try home.openDir(io, name, .{});
     const metadata_file = try dir.openFile(io, "metadata", .{});
@@ -82,6 +84,7 @@ pub fn environ(self: *Self, version: []const u8, allocator: std.mem.Allocator, m
     }
 }
 
+/// Closes the runtime directory handle.
 pub fn deinit(self: *Self) void {
     self.dir.close(self.io);
 }
