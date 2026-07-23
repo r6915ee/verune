@@ -3,16 +3,7 @@ const std = @import("std");
 const Io = std.Io;
 
 pub const KV = @import("libver/KV.zig");
-
-pub const RuntimeBuilder = struct {
-    display_name: []const u8,
-    search_paths: []const []const u8,
-};
-
-pub const RuntimeGrazer = struct {
-    unique_name: []const u8,
-    builder: RuntimeBuilder,
-};
+pub const RuntimeGrazer = @import("libver/RuntimeGrazer.zig");
 
 test {
     std.testing.refAllDecls(@This());

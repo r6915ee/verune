@@ -6,8 +6,8 @@ pub fn build(b: *std.Build) void {
 
     const mod = b.addModule("libver", .{
         .root_source_file = b.path("src/root.zig"),
-
         .target = target,
+        .imports = &.{},
     });
 
     const exe = b.addExecutable(.{
