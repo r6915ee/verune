@@ -12,6 +12,7 @@ unique_name: []const u8,
 metadata: Metadata,
 io: Io,
 dir: Io.Dir,
+home_path: []const u8,
 
 pub const OpenError = Io.Dir.OpenError || Io.File.OpenError || std.mem.Allocator.Error;
 
@@ -20,7 +21,7 @@ pub const Metadata = struct {
     search_paths: ?[]const []const u8,
 };
 
-pub fn open(io: Io, allocator: std.mem.Allocator, home: Io.Dir, name: []const u8) OpenError!Self {
+pub fn open(io: Io, allocator: std.mem.Allocator, home: Io.Dir, home_path: []const u8, name: []const u8) OpenError!Self {
     const dir = try home.openDir(io, name, .{});
     const metadata_file = try dir.openFile(io, "metadata", .{});
     var buf: [255]u8 = undefined;
@@ -58,6 +59,7 @@ pub fn open(io: Io, allocator: std.mem.Allocator, home: Io.Dir, name: []const u8
         .metadata = metadata,
         .io = io,
         .dir = dir,
+        .home_path = home_path,
     };
 }
 
@@ -76,7 +78,8 @@ const tio = std.testing.io;
 const talloc = std.testing.allocator;
 
 test "RuntimeGrazer.open: success" {
-    const tdir = std.testing.tmpDir(.{}).dir;
+    const tdir_root = std.testing.tmpDir(.{});
+    const tdir = tdir_root.dir;
     defer tdir.close(tio);
     const rtdir = try tdir.createDirPathOpen(tio, "runtime", .{});
     defer rtdir.close(tio);
@@ -86,25 +89,28 @@ test "RuntimeGrazer.open: success" {
     var metadata_writer = metadata.writer(tio, &metadata_buf);
     try metadata_writer.interface.writeAll("display_name=Generic\nsearch_paths=abc");
     try metadata_writer.flush();
-    var rt = try open(tio, talloc, tdir, "runtime");
+    var rt = try open(tio, talloc, tdir, &tdir_root.sub_path, "runtime");
     rt.deinit(talloc);
 }
 
 test "RuntimeGrazer.open: homeless" {
-    const tdir = std.testing.tmpDir(.{}).dir;
+    const tdir_root = std.testing.tmpDir(.{});
+    const tdir = tdir_root.dir;
     defer tdir.close(tio);
-    try std.testing.expectError(Io.Dir.OpenError.FileNotFound, open(tio, talloc, tdir, "runtime"));
+    try std.testing.expectError(Io.Dir.OpenError.FileNotFound, open(tio, talloc, tdir, &tdir_root.sub_path, "runtime"));
 }
 
 test "RuntimeGrazer.open: metadataless" {
-    const tdir = std.testing.tmpDir(.{}).dir;
+    const tdir_root = std.testing.tmpDir(.{});
+    const tdir = tdir_root.dir;
     defer tdir.close(tio);
     try tdir.createDirPath(tio, "runtime");
-    try std.testing.expectError(Io.File.OpenError.FileNotFound, open(tio, talloc, tdir, "runtime"));
+    try std.testing.expectError(Io.File.OpenError.FileNotFound, open(tio, talloc, tdir, &tdir_root.sub_path, "runtime"));
 }
 
 test "RuntimeGrazer.open: allocator error" {
-    const tdir = std.testing.tmpDir(.{}).dir;
+    const tdir_root = std.testing.tmpDir(.{});
+    const tdir = tdir_root.dir;
     defer tdir.close(tio);
     const rtdir = try tdir.createDirPathOpen(tio, "runtime", .{});
 
@@ -113,11 +119,12 @@ test "RuntimeGrazer.open: allocator error" {
     var metadata_writer = metadata.writer(tio, &metadata_buf);
     try metadata_writer.interface.writeAll("display_name=Generic\nsearch_paths=abc");
     try metadata_writer.flush();
-    try std.testing.expectError(std.mem.Allocator.Error.OutOfMemory, open(tio, std.testing.failing_allocator, tdir, "runtime"));
+    try std.testing.expectError(std.mem.Allocator.Error.OutOfMemory, open(tio, std.testing.failing_allocator, tdir, &tdir_root.sub_path, "runtime"));
 }
 
 test "RuntimeGrazer.version: success" {
-    const tdir = std.testing.tmpDir(.{}).dir;
+    const tdir_root = std.testing.tmpDir(.{});
+    const tdir = tdir_root.dir;
     defer tdir.close(tio);
     const rtdir = try tdir.createDirPathOpen(tio, "runtime", .{});
     defer rtdir.close(tio);
@@ -128,7 +135,7 @@ test "RuntimeGrazer.version: success" {
     var metadata_writer = metadata.writer(tio, &metadata_buf);
     try metadata_writer.interface.writeAll("display_name=Generic\nsearch_paths=abc");
     try metadata_writer.flush();
-    var rt = try open(tio, talloc, tdir, "runtime");
+    var rt = try open(tio, talloc, tdir, &tdir_root.sub_path, "runtime");
     defer rt.deinit(talloc);
 
     const vr = try rt.version("0.1.0");
@@ -136,7 +143,8 @@ test "RuntimeGrazer.version: success" {
 }
 
 test "RuntimeGrazer.version: fail" {
-    const tdir = std.testing.tmpDir(.{}).dir;
+    const tdir_root = std.testing.tmpDir(.{});
+    const tdir = tdir_root.dir;
     defer tdir.close(tio);
     const rtdir = try tdir.createDirPathOpen(tio, "runtime", .{});
     defer rtdir.close(tio);
@@ -146,7 +154,7 @@ test "RuntimeGrazer.version: fail" {
     var metadata_writer = metadata.writer(tio, &metadata_buf);
     try metadata_writer.interface.writeAll("display_name=Generic\nsearch_paths=abc");
     try metadata_writer.flush();
-    var rt = try open(tio, talloc, tdir, "runtime");
+    var rt = try open(tio, talloc, tdir, &tdir_root.sub_path, "runtime");
     defer rt.deinit(talloc);
 
     try std.testing.expectError(Io.Dir.OpenError.FileNotFound, rt.version("0.1.0"));
