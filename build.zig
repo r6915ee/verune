@@ -9,6 +9,11 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .imports = &.{},
     });
+    const mod_lib = b.addLibrary(.{
+        .name = "libver",
+        .root_module = mod,
+        .linkage = .static,
+    });
 
     const exe = b.addExecutable(.{
         .name = "verune",
@@ -41,4 +46,12 @@ pub fn build(b: *std.Build) void {
     const test_step = b.step("test", "Run tests");
     test_step.dependOn(&run_mod_tests.step);
     test_step.dependOn(&run_exe_tests.step);
+
+    const install_docs = b.addInstallDirectory(.{
+        .source_dir = mod_lib.getEmittedDocs(),
+        .install_dir = .prefix,
+        .install_subdir = "docs",
+    });
+    const docs_step = b.step("docs", "Install documentation for libver into zig-out/docs");
+    docs_step.dependOn(&install_docs.step);
 }
