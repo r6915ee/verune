@@ -16,8 +16,9 @@ const main_parsers = .{
 };
 
 const main_params = clap.parseParamsComptime(
-    \\-h, --help  Display this help and exit.
-    \\<COMMAND>   The subcommand to pass.
+    \\-h, --help                           Display this help and exit.
+    \\-v, --version                        Display the version and exit.
+    \\<COMMAND>                            The subcommand to pass.
     \\
 );
 
@@ -51,6 +52,14 @@ pub fn main(init: std.process.Init) !void {
     };
     defer res.deinit();
 
+    if (res.args.version != 0) {
+        const stdout_handle: Io.File = .stdout();
+        var stdout_buffer: [6]u8 = undefined;
+        var stdout = stdout_handle.writer(init.io, &stdout_buffer);
+
+        try stdout.interface.print("{s}", .{meta.version});
+        return stdout.flush();
+    }
     if (res.args.help != 0)
         return generateHelp(init.io, &main_params);
 
