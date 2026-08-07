@@ -4,12 +4,22 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
+    const clap = b.dependency("clap", .{
+        .target = target,
+        .optimize = optimize,
+    });
+
     const mod = b.addModule("libver", .{
         .root_source_file = b.path("src/lib/libver.zig"),
         .target = target,
         .imports = &.{},
     });
 
+    const exe_meta = b.createModule(.{
+        .root_source_file = b.path("build.zig.zon"),
+        .target = target,
+        .optimize = optimize,
+    });
     const exe = b.addExecutable(.{
         .name = "verune",
         .root_module = b.createModule(.{
@@ -18,6 +28,8 @@ pub fn build(b: *std.Build) void {
             .optimize = optimize,
             .imports = &.{
                 .{ .name = "libver", .module = mod },
+                .{ .name = "clap", .module = clap.module("clap") },
+                .{ .name = "meta", .module = exe_meta },
             },
         }),
     });
