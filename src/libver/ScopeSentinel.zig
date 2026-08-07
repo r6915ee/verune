@@ -2,7 +2,6 @@ const std = @import("std");
 const builtin = @import("builtin");
 const Io = std.Io;
 
-/// Manages environments for scopes.
 const Self = @This();
 
 const KV = @import("KV.zig");
