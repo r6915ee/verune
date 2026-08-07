@@ -1,3 +1,4 @@
+//! Manages scopes and interacting with projects.
 const std = @import("std");
 const builtin = @import("builtin");
 const Io = std.Io;

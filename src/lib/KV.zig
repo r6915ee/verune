@@ -1,3 +1,4 @@
+//! A key-value pair.
 const Self = @This();
 
 const std = @import("std");

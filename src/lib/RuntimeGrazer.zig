@@ -1,3 +1,7 @@
+//! The main filesystem layer to runtimes.
+//!
+//! `RuntimeGrazer` is responsible for every IO operation with runtimes.
+//! One `RuntimeGrazer` handles one single runtime.
 const std = @import("std");
 const builtin = @import("builtin");
 const Io = std.Io;

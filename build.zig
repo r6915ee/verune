@@ -5,14 +5,9 @@ pub fn build(b: *std.Build) void {
     const optimize = b.standardOptimizeOption(.{});
 
     const mod = b.addModule("libver", .{
-        .root_source_file = b.path("src/root.zig"),
+        .root_source_file = b.path("src/lib/libver.zig"),
         .target = target,
         .imports = &.{},
-    });
-    const mod_lib = b.addLibrary(.{
-        .name = "libver",
-        .root_module = mod,
-        .linkage = .static,
     });
 
     const exe = b.addExecutable(.{
@@ -35,9 +30,7 @@ pub fn build(b: *std.Build) void {
         run_cmd.addArgs(args);
     }
 
-    const mod_tests = b.addTest(.{
-        .root_module = mod,
-    });
+    const mod_tests = b.addTest(.{ .root_module = mod });
     const run_mod_tests = b.addRunArtifact(mod_tests);
     const exe_tests = b.addTest(.{
         .root_module = exe.root_module,
@@ -48,7 +41,7 @@ pub fn build(b: *std.Build) void {
     test_step.dependOn(&run_exe_tests.step);
 
     const install_docs = b.addInstallDirectory(.{
-        .source_dir = mod_lib.getEmittedDocs(),
+        .source_dir = mod_tests.getEmittedDocs(),
         .install_dir = .prefix,
         .install_subdir = "docs",
     });
