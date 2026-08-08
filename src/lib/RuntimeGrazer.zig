@@ -17,10 +17,9 @@ io: Io,
 dir: Io.Dir,
 /// The path to the runtime home. Use this instead of [`Io.Dir.realPath`](#std.Io.Dir.realPath).
 home_path: []const u8,
-environ_file_err: ?Io.File.OpenError = null,
 
 pub const OpenError = Io.Dir.OpenError || Io.File.OpenError;
-pub const EnvironError = std.mem.Allocator.Error || error{NoValue};
+pub const EnvironError = Io.File.OpenError || std.mem.Allocator.Error || error{NoValue};
 
 pub const Metadata = struct {
     /// A name that refers to the runtime. This is primarily useful for user interfaces to `libver`.
@@ -56,10 +55,7 @@ pub fn open(io: Io, home: Io.Dir, home_path: []const u8, name: []const u8) OpenE
 
 /// Modifies `map` in place with the contents of a runtime's `environ` file.
 pub fn environ(self: *Self, version: []const u8, allocator: std.mem.Allocator, map: *std.process.Environ.Map) EnvironError!void {
-    const environ_file = self.dir.openFile(self.io, "environ", .{}) catch |err| {
-        self.environ_file_err = err;
-        return;
-    };
+    const environ_file = try self.dir.openFile(self.io, "environ", .{});
     var buf: [255]u8 = undefined;
     var environ_reader = environ_file.reader(self.io, &buf);
 
@@ -170,8 +166,7 @@ test "RuntimeGrazer.environ: no environ" {
 
     var map = try std.testing.environ.createMap(talloc);
     defer map.deinit();
-    try rt.environ("0.1.0", talloc, &map);
-    try std.testing.expect(Io.File.OpenError.FileNotFound == rt.environ_file_err.?);
+    try std.testing.expectError(Io.File.OpenError.FileNotFound, rt.environ("0.1.0", talloc, &map));
 }
 
 test "RuntimeGrazer.environ: allocator fail" {
