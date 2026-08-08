@@ -225,5 +225,5 @@ verune scope zig version # 0.16.0
 
 ## License
 
-`verune` and `libver` are dual-licensed under the _MIT_ and **Apache 2.0**
+`verune` and `libver` are dual-licensed under the **MIT** and **Apache 2.0**
 licenses. Contributions must be licensed in this manner.
