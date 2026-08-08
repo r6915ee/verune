@@ -132,7 +132,7 @@ pub fn main(init: std.process.Init) !void {
     const command = res.positionals[0] orelse return error.MissingCommand;
     switch (command) {
         .scope => try scopeMain(init.io, init.gpa, .cwd(), map, &iter, home_path, res),
-        .filter => try filterMain(init.io, init.gpa, .cwd(), map, &iter, home_path, res),
+        .filter => try filterMain(init.io, init.gpa, .cwd(), map, &iter, res),
     }
 }
 
@@ -174,7 +174,7 @@ fn scopeMain(io: Io, gpa: std.mem.Allocator, dir: Io.Dir, map: *std.process.Envi
     return std.process.replace(io, .{ .argv = argv, .environ_map = map });
 }
 
-fn filterMain(io: Io, gpa: std.mem.Allocator, dir: Io.Dir, map: *std.process.Environ.Map, iter: *std.process.Args.Iterator, home_path: []const u8, main_args: MainArgs) !void {
+fn filterMain(io: Io, gpa: std.mem.Allocator, dir: Io.Dir, map: *std.process.Environ.Map, iter: *std.process.Args.Iterator, main_args: MainArgs) !void {
     const params = comptime clap.parseParamsComptime(
         \\-h, --help         Display this help and exit.
         \\-i, --installed    List only installed runtimes
@@ -197,9 +197,6 @@ fn filterMain(io: Io, gpa: std.mem.Allocator, dir: Io.Dir, map: *std.process.Env
     var conf_buf: [255]u8 = undefined;
     var scope = try generateScope(io, gpa, dir, map, main_args, &conf_buf);
     defer scope.deinit();
-
-    const home: Io.Dir = try dir.openDir(io, home_path, .{});
-    defer home.close(io);
 
     var i_balance: u2 = 1;
     if (res.args.installed != 0)
