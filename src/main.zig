@@ -9,6 +9,7 @@ const meta = @import("meta");
 // These are our subcommands.
 const SubCommands = enum {
     scope,
+    filter,
 };
 
 const main_parsers = .{
@@ -131,6 +132,7 @@ pub fn main(init: std.process.Init) !void {
     const command = res.positionals[0] orelse return error.MissingCommand;
     switch (command) {
         .scope => try scopeMain(init.io, init.gpa, .cwd(), map, &iter, home_path, res),
+        .filter => try filterMain(init.io, init.gpa, .cwd(), map, &iter, home_path, res),
     }
 }
 
@@ -158,8 +160,6 @@ fn scopeMain(io: Io, gpa: std.mem.Allocator, dir: Io.Dir, map: *std.process.Envi
     var scope = try generateScope(io, gpa, dir, map, main_args, &conf_buf);
     defer scope.deinit();
 
-    std.debug.print("{any}", .{scope.conf.get("haxe")});
-
     const home: Io.Dir = try dir.openDir(io, home_path, .{});
     defer home.close(io);
 
@@ -172,4 +172,56 @@ fn scopeMain(io: Io, gpa: std.mem.Allocator, dir: Io.Dir, map: *std.process.Envi
     const argv: []const []const u8 = if (res.positionals[0].len > 0) res.positionals[0] else if (map.get("SHELL")) |sh| &.{sh} else if (builtin.os.tag == .windows) &.{"cmd"} else &.{"sh"};
 
     return std.process.replace(io, .{ .argv = argv, .environ_map = map });
+}
+
+fn filterMain(io: Io, gpa: std.mem.Allocator, dir: Io.Dir, map: *std.process.Environ.Map, iter: *std.process.Args.Iterator, home_path: []const u8, main_args: MainArgs) !void {
+    const params = comptime clap.parseParamsComptime(
+        \\-h, --help         Display this help and exit.
+        \\-i, --installed    List only installed runtimes
+        \\-u, --uninstalled  List only uninstalled runtimes
+    );
+
+    var diag = clap.Diagnostic{};
+    var res = clap.parseEx(clap.Help, &params, main_parsers, iter, .{
+        .diagnostic = &diag,
+        .allocator = gpa,
+    }) catch |err| {
+        try diag.reportToFile(io, .stderr(), err);
+        return err;
+    };
+    defer res.deinit();
+
+    if (res.args.help != 0)
+        return generateHelp(io, "filter", &params);
+
+    var conf_buf: [255]u8 = undefined;
+    var scope = try generateScope(io, gpa, dir, map, main_args, &conf_buf);
+    defer scope.deinit();
+
+    const home: Io.Dir = try dir.openDir(io, home_path, .{});
+    defer home.close(io);
+
+    var i_balance: u2 = 1;
+    if (res.args.installed != 0)
+        i_balance += 1;
+    if (res.args.uninstalled != 0)
+        i_balance -= 1;
+
+    var ite = scope.conf.iterator();
+    while (ite.next()) |x| {
+        const y = try std.fmt.allocPrint(gpa, "{s}{c}{s}", .{ x.key_ptr.*, if (builtin.os.tag == .windows) '\\' else '/', x.value_ptr.* });
+        defer gpa.free(y);
+
+        const z = if (dir.access(io, y, .{})) |_| true else |_| false;
+
+        if ((i_balance == 0 and z == false) or (i_balance == 2 and z == true))
+            continue;
+
+        const stdout_handle: Io.File = .stdout();
+        var stdout_buf: [64]u8 = undefined;
+        var stdout = stdout_handle.writer(io, &stdout_buf);
+
+        try stdout.interface.print("{s}={s}", .{ x.key_ptr.*, x.value_ptr.* });
+        try stdout.flush();
+    }
 }
