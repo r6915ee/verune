@@ -43,15 +43,39 @@ fn generateHelp(io: Io, params: []const clap.Param(clap.Help)) !void {
 }
 
 fn generateScope(io: Io, gpa: std.mem.Allocator, dir: Io.Dir, map: *std.process.Environ.Map, main_args: MainArgs, conf_buf: []u8) !libver.ScopeSentinel {
-    const conf_file = try dir.openFile(io, map.get("VER_CONFIG") orelse ".version", .{});
+    const conf_file = try dir.openFile(io, map.get("VERUNE_CONFIG") orelse ".version", .{});
     defer conf_file.close(io);
+
+    var conf_buf_writer: Io.Writer = .fixed(conf_buf);
 
     // `conf_buf` must be allocated separately from this function, because `ScopeSentinel` doesn't (and shouldn't) own the memory to the key-value pairs.
     // I think the stack memory address gets naturally reused by Io.Reader, so the keys and values are still the same memory.
-    var conf_reader = conf_file.reader(io, conf_buf);
+    var conf_file_reader = conf_file.reader(io, conf_buf);
+    _ = try conf_file_reader.interface.streamRemaining(&conf_buf_writer);
+
+    if (map.get("VERUNE_OVERLAYS")) |overlays| {
+        var iter = std.mem.splitScalar(u8, overlays, if (builtin.os.tag == .windows) ';' else ':');
+        while (iter.next()) |x| {
+            const x_file = try dir.openFile(io, x, .{});
+            defer x_file.close(io);
+
+            var x_file_reader = x_file.reader(io, conf_buf);
+            _ = try x_file_reader.interface.streamRemaining(&conf_buf_writer);
+        }
+    }
+
+    for (main_args.args.overlay) |x| {
+        const x_file = try dir.openFile(io, x, .{});
+        defer x_file.close(io);
+
+        var x_file_reader = x_file.reader(io, conf_buf);
+        _ = try x_file_reader.interface.streamRemaining(&conf_buf_writer);
+    }
+
     var scope: libver.ScopeSentinel = .new(gpa);
     errdefer scope.deinit();
-    try scope.interp(&conf_reader.interface);
+    var conf_buf_reader: Io.Reader = .fixed(conf_buf);
+    try scope.interp(&conf_buf_reader);
 
     for (main_args.args.replace) |x| {
         var reader: Io.Reader = .fixed(x);
