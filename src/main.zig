@@ -29,13 +29,17 @@ const main_params = clap.parseParamsComptime(
 
 const MainArgs = clap.ResultEx(clap.Help, &main_params, main_parsers);
 
-fn generateHelp(io: Io, params: []const clap.Param(clap.Help)) !void {
+fn generateHelp(io: Io, version: ?[]const u8, params: []const clap.Param(clap.Help)) !void {
     const stderr_handle: Io.File = .stderr();
     var stderr_buffer: [255]u8 = undefined;
     var stderr = stderr_handle.writer(io, &stderr_buffer);
 
     try stderr.interface.print("usage: {s} ", .{@tagName(meta.name)});
     try stderr.flush();
+    if (version) |v| {
+        try stderr.interface.print("{s} ", .{v});
+        try stderr.flush();
+    }
     try clap.usage(&stderr.interface, clap.Help, params);
     try stderr.interface.writeAll("\n");
     try clap.help(&stderr.interface, clap.Help, params, .{ .description_indent = 4, .spacing_between_parameters = 0 });
@@ -114,7 +118,7 @@ pub fn main(init: std.process.Init) !void {
         return stdout.flush();
     }
     if (res.args.help != 0)
-        return generateHelp(init.io, &main_params);
+        return generateHelp(init.io, null, &main_params);
 
     const map = init.environ_map;
 
@@ -148,7 +152,7 @@ fn scopeMain(io: Io, gpa: std.mem.Allocator, dir: Io.Dir, map: *std.process.Envi
     defer res.deinit();
 
     if (res.args.help != 0)
-        return generateHelp(io, &params);
+        return generateHelp(io, "scope", &params);
 
     var conf_buf: [255]u8 = undefined;
     var scope = try generateScope(io, gpa, dir, map, main_args, &conf_buf);
