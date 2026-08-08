@@ -25,9 +25,8 @@ pub fn new(allocator: std.mem.Allocator) Self {
 /// Note that this can be a destructive operation, so it's best to make sure that the allocator works correctly.
 pub fn interp(self: *Self, reader: *Io.Reader) std.mem.Allocator.Error!void {
     var parser = KV.parse(reader);
-    while (parser.next()) |kv| {
+    while (parser.next()) |kv|
         try self.conf.put(kv.key, kv.value);
-    }
 }
 
 /// Go through every runtime in the configuration and load its environment variables into `map`.
