@@ -218,7 +218,7 @@ fn filterMain(io: Io, gpa: std.mem.Allocator, dir: Io.Dir, map: *std.process.Env
         var stdout_buf: [64]u8 = undefined;
         var stdout = stdout_handle.writer(io, &stdout_buf);
 
-        try stdout.interface.print("{s}={s}", .{ x.key_ptr.*, x.value_ptr.* });
+        try stdout.interface.print("{s}={s}\n", .{ x.key_ptr.*, x.value_ptr.* });
         try stdout.flush();
     }
 }
