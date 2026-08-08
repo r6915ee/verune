@@ -13,19 +13,21 @@ conf: ConfFormat,
 pub const ConfFormat = std.StringHashMap([]const u8);
 pub const EnvironError = Io.Dir.RealPathError || RuntimeGrazer.OpenError || std.process.Environ.CreateMapError || RuntimeGrazer.EnvironError;
 
-/// Initialize a `ScopeSentinel`, using a [`Reader`](#std.Io.Reader) that goes through the `.version` file.
-/// Remember to run `deinit` once you're done!
-pub fn open(reader: *Io.Reader, allocator: std.mem.Allocator) std.mem.Allocator.Error!Self {
-    var conf: ConfFormat = .init(allocator);
-    errdefer conf.deinit();
+/// Creates a new `ScopeSentinel`. Remember to run `deinit` once you're done!
+pub fn new(allocator: std.mem.Allocator) Self {
+    return .{
+        .conf = .init(allocator),
+    };
+}
+
+/// Write to a `ScopeSentinel`'s configuration using a reader with key-value pairs.
+///
+/// Note that this can be a destructive operation, so it's best to make sure that the allocator works correctly.
+pub fn interp(self: *Self, reader: *Io.Reader) std.mem.Allocator.Error!void {
     var parser = KV.parse(reader);
     while (parser.next()) |kv| {
-        try conf.put(kv.key, kv.value);
+        try self.conf.put(kv.key, kv.value);
     }
-
-    return .{
-        .conf = conf,
-    };
 }
 
 /// Go through every runtime in the configuration and load its environment variables into `map`.
@@ -49,22 +51,30 @@ pub fn deinit(self: *Self) void {
 const tio = std.testing.io;
 const talloc = std.testing.allocator;
 
-test "ScopeSentinel.open: success" {
+test "ScopeSentinel.new: success" {
+    var sentinel = new(talloc);
+    sentinel.deinit();
+}
+
+test "ScopeSentinel.interp: success" {
     const buf: []const u8 = "runtime=0.1.0";
     var reader: Io.Reader = .fixed(buf);
 
-    var sentinel = try open(&reader, talloc);
+    var sentinel = new(talloc);
     defer sentinel.deinit();
+    try sentinel.interp(&reader);
 }
 
-test "ScopeSentinel.open: allocator fail" {
+test "ScopeSentinel.interp: allocator fail" {
     const buf: []const u8 = "runtime=0.1.0";
     var reader: Io.Reader = .fixed(buf);
 
-    try std.testing.expectError(std.mem.Allocator.Error.OutOfMemory, open(&reader, std.testing.failing_allocator));
+    var sentinel = new(std.testing.failing_allocator);
+    defer sentinel.deinit();
+    try std.testing.expectError(std.mem.Allocator.Error.OutOfMemory, sentinel.interp(&reader));
 }
 
-test "ScopeSentinel.exec: success" {
+test "ScopeSentinel.environ: success" {
     const tdir_root = std.testing.tmpDir(.{});
     const tdir = tdir_root.dir;
     defer tdir.close(tio);
@@ -86,15 +96,16 @@ test "ScopeSentinel.exec: success" {
     const buf: []const u8 = "runtime=0.1.0";
     var reader: Io.Reader = .fixed(buf);
 
-    var sentinel = try open(&reader, talloc);
+    var sentinel = new(talloc);
     defer sentinel.deinit();
+    try sentinel.interp(&reader);
 
     var map = try std.testing.environ.createMap(talloc);
     defer map.deinit();
     try sentinel.environ(tio, talloc, tdir, &tdir_root.sub_path, &map);
 }
 
-test "ScopeSentinel.exec: rt error" {
+test "ScopeSentinel.environ: rt error" {
     const tdir_root = std.testing.tmpDir(.{});
     const tdir = tdir_root.dir;
     defer tdir.close(tio);
@@ -102,8 +113,9 @@ test "ScopeSentinel.exec: rt error" {
     const buf: []const u8 = "runtime=0.1.0";
     var reader: Io.Reader = .fixed(buf);
 
-    var sentinel = try open(&reader, talloc);
+    var sentinel = new(talloc);
     defer sentinel.deinit();
+    try sentinel.interp(&reader);
 
     var map = try std.testing.environ.createMap(talloc);
     defer map.deinit();
