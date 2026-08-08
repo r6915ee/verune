@@ -2,237 +2,228 @@
 
 > _Dead simple, generic runtime version manager_
 
-> [!WARNING]
-> The README below applies for the prior Rust version of `verune`. `verune` is
-> currently being reimplemented in Zig and is guaranteed to have some semantics
-> changed, so this README is outdated.
+Software development relies on the concept of runtimes, which are responsible
+for invoking compilers, interpreters, virtual machines, and more. They make
+developing in a programming language easier and faster, alongside providing
+performance benefits.
 
-Software development often involves the usage of runtimes, such as compilers or
-interpreters, that allow building software systems. Often, these runtimes are
-managed using system package managers.
+Unfortunately, there isn't a defined way to manage them in a safe and portable
+manner. For example, most package managers won't allow having multiple versions
+installed on a system, which can cause problems with breaking changes.
 
-The main drawback to the approach of installing runtimes as packages, however,
-is that they are not pinned in the slightest. Imagine a runtime at some point
-had a breaking change that impacted some software; if somebody attempted to use
-that software with a version of the runtime that included this breaking change,
-it would be impossible to safely use the software.
+`verune` aims to mitigate this by treating projects as what define runtime
+runtime versions, helping both developers and users get up to speed and safe on
+development.
 
-`verune` solves this issue on a project-based manner: a configuration gets
-created by a developer that pinpoints what version of each runtime is needed,
-and other developers and/or users can then use or develop that software using
-only that version.
+The design of `verune` means it can be used with unusual forms of toolchains,
+such as game engines.
 
 ## Installation
 
-`verune` can be installed from a global Cargo installation using `cargo
-install`.
+`verune` provides binaries on its [releases
+page](https://codeberg.org/r6915ee/verune/); choose the one most suitable for
+your platform.
+
+### Building
+
+You can also use the [Zig toolchain](https://ziglang.org/) to build `verune`.
+Using version v0.16.0, you can run any of the build steps:
 
 ```sh
-cargo install verune # Install from Crates.io
-cargo install --git https://codeberg.org/r6915ee/verune.git # Install using Git
+zig build # Build a binary.
+zig build run # Build and run a binary.
+zig build test # Run any unit tests.
+zig build docs # Build the libver docs.
 ```
 
 ## Usage
 
-### Runtimes
+### Basic
 
-Runtimes must be installed in a portable fashion: that is, they cannot be
-managed by another program, such as a system package manager or a Windows
-installer.
+#### Runtimes
 
-Runtimes go under `~/.ver/`, where the tilde is equivalent to the home
-directory. A simple way to look at this design would be a tree:
+To get started using a runtime, you first need to set a runtime home, which
+is where all of your runtimes and their metadata are stored. This is set to
+the `~/.ver` directory by default, assuming `~` refers to the home directory.
+You can change where the runtime home is located by using the `VERUNE_HOME`
+environment variable.
 
-```
-~/.ver/
-|-haxe/
-  |-meta.ron
-|-bun/
-  |-meta.ron
-|-rust/
-  |-meta.ron
-```
-
-Runtime metadata can be declared using `meta.ron` files, which are in the
-[RON](https://github.com/ron-rs/ron/) format. The format in particular is
-similar to _JSON_, but introduces some changes that make readability easier.
-
-Assuming we've chosen a sample as our first runtime to install, the first step
-is to create its associated directory under the runtime directory. Then, all we
-need to do is run `verune`'s `template` subcommand:
-
-```sh
-verune template runtime
-```
-
-This will create a template metadata file for us under `~/.ver/runtime/meta.ron`.
-This file contains the following:
-
-```ron
-(
-    display_name: "",
-    search_paths: [],
-)
-```
-
-`display_name` is primarily useful for GUI programs. What is of particular
-interest is the `search_paths` field, however. Any external programs can use
-this field's data as paths to search for runtime-specific programs that are
-hidden deeper in a version's installation; for example:
+Each runtime needs to have its own folder in the home. Subdirectories under
+this folder will be treated as runtime versions For example, a valid Zig
+installation would look like this:
 
 ```
-~/.ver/runtime/
-|-1.0.0/
-  |-prog
-  |-dir/
-    |-two/
-      |-pkgman
+└── zig
+    ├── 0.16.0
+    ├── environ
+    └── metadata
 ```
 
-If we wanted to be able to execute `pkgman` in this example, we can simply add
-its relative parent directory into the `search_paths` field. Thus, a possible
-example of a metadata file for this runtime would be:
+The files that define a runtime the most are the `metadata` file and the
+`environ` file. Both are written in a basic key-value pair language that is
+similar to the INI format. `metadata` only has a single field, that being
+`display_name`, which is primarily useful for different user interfaces:
 
-```ron
-(
-    display_name: "Runtime",
-    search_paths: ["dir/two"],
-)
+```
+display_name=Zig
 ```
 
-Now we can get into setting up projects.
+The `environ` file is more interesting, however. It accepts any key-value
+pairs, and each pair will be set as an environment variable:
 
-### Projects
-
-Assuming we use the prior runtime example with `prog` and `pkgman`, we know
-that our project uses version v1.0.0 of that runtime. We can create a project
-configuration using the `apply` subcommand:
-
-```sh
-verune apply runtime 1.0.0
+```
+PATH=${home}/zig/${version}::${PATH}
 ```
 
-Normally, this will create and write to `.ver.ron`, which is where all runtime
-version information is stored using [RON](https://github.com/ron-rs/ron/). If
-we specify a version that is not installed, however, we get an error. If you're
-just looking to tell the program which version you want to use, you may do so
-by using the `-u`/`--skip-check` flag.
+Values are encouraged to use substitution, which will replace substitution
+tokens with something else. `${home}` will match to the current runtime home,
+`${version}` will match to the currently selected runtime version, `::` will
+match to the current system's preferred `PATH` delimiter, and anything else
+enclosed in `${` and `}` will be treated as an environment variable. This file
+is one of the more powerful features of `verune` due to its substitution and
+environment modification, and every runtime is expected to have one in order
+to provide the binaries of the runtime.
 
-```sh
-verune apply runtime 1.0.1 # Error!
-verune apply -u runtime 1.0.1 # Success
+You can pretty much do anything with the `environ` file, such as providing
+wrappers over a runtime, setting up libraries, and more. Some examples of its
+capabilities include:
+
+- Running a runtime in a sandbox
+- Adding a cross-compilation wrapper
+- Serving shared and static libraries
+
+#### Projects
+
+Finally, we need to add support for `verune` into a project. In a project's
+repository, create a `.version` file and write the following string in it:
+
+```
+zig=0.16.0
 ```
 
-Of course, it's better to use the former approach to applying versions, as
-it's simply better to be safe than sorry in the case of version management.
-
-An interesting thing to note is that `.ver.ron` isn't the only possible
-location for a configuration file. The configuration file location can be
-controlled using the `-c`/`--config` flag and the `VER_CONFIG` environment
-variable, which allow for using multiple configuration files in a single
-project:
-
-```sh
-verune -c .sec.ver.ron apply runtime 1.0.0
-export VER_CONFIG=.thr.ver.ron
-verune apply runtime 1.0.0
-```
-
-When you want to finally start using the runtimes you have in your
-configuration, you can use the `scope` subcommand to run a program that has
-access to each runtime's version directory. By default, this subcommand will
-use the system's command line shell (e.g.
-[Bash](https://www.gnu.org/software/bash/)), but other programs and even
-arguments can be spawned this way:
+That's it! Now you just need to enter a "scope", which will get your
+environment ready for you:
 
 ```sh
 verune scope
-$ prog # Success!
-$ pkgman # Success!
+$ zig version # 0.16.0
 $ exit
-verune scope echo "t" # t
-# We can even run runtime programs using this method!
-verune scope prog # Success!
-verune scope pkgman # Success!
+zig version # Since we exited out of the scope already, Zig won't be available.
 ```
 
-### Advanced Usage
+#### Filter
 
-#### Overlays
-
-`verune` has support for _overlays_, a system in which the current
-configuration file gets merged with additional configurations specified through
-any _overlay inputs_. The main inputs available are the `--replace` and
-`--overlay` options, as well as the `VERUNE_OVERLAYS` environment variable.
-Each overlay is applied _by input_ in the sense that one input will need to
-finish applying before applying the next one.
-
-`--replace` is the simplest way to apply an overlay, and gets applied last.
-This option simply takes a runtime identifier and version number to apply, and
-can be repeated.
+The second subcommand available in `verune` is `filter`, which lists every
+runtime version that the project is using. By default, it will print every
+runtime version in use:
 
 ```sh
-verune --replace lune 0.10.4 scope
+verune filter
+# zig=0.16.0
 ```
 
-`--overlay` is similar to `--replace`, being applied second. However, a
-configuration file can be feed to this option instead of a runtime identifier
-and version, being able to apply multiple changes at once.
+However, you can also add various flags to `filter`. For example, `--installed`
+will only list installed runtimes:
 
 ```sh
-verune --overlay .sec.ver.ron --overlay .thr.ver.ron scope
+verune filter --installed
+# zig=0.16.0
 ```
 
-`VERUNE_OVERLAYS` essentially acts like a variant of the `PATH` environment
-variable, except it shares the same functionality as `--overlay`, being applied
-first. Paths are separated by the same delimiter used by `PATH` on the system,
-generally a semicolon (`;`) on Windows and a colon (`:`) otherwise.
+...and `--uninstalled` will only list uninstalled ones:
 
 ```sh
-# We assume we're using a UNIX-like system.
-export VERUNE_OVERLAYS=.sec.ver.ron:.thr.ver.ron
+verune filter --uninstalled
+```
+
+Using `filter`, you can check which runtimes you need to install for a project
+using `verune`.
+
+### Advanced
+
+#### Configuration
+
+`verune` can use a different file for project configuration by using the
+`VERUNE_CONFIG` environment variable.
+
+```sh
+echo zig=0.16.0 > conf
+VERUNE_CONFIG=conf verune scope
+$ zig version # 0.16.0
+```
+
+However, `verune` also has a concept called _overlays_. An overlay is created
+by using at least one _overlay input_, which is an additional piece of
+configuration that gets loaded.
+
+The most basic input is the `--replace` option, which uses a string that is
+very similar to a regular configuration file, and comes after every other
+input:
+
+```sh
+verune --replace zig=0.16.0 scope
+$ zig version # 0.16.0
+```
+
+The `--overlay` option will instead read from a dedicated file and comes in
+the middle:
+
+```sh
+verune --overlay conf scope
+$ zig version # 0.16.0
+```
+
+Finally, the `VERUNE_OVERLAYS` environment variable lists files to use as
+inputs and comes before everything else:
+
+```sh
+echo haxe=4.3.7 > alt
+VERUNE_OVERLAYS=conf:alt verune scope
+$ zig version # 0.16.0
+$ haxe --version # 4.3.7
+```
+
+#### Environment Variables
+
+`verune` sets a special environment variable in scopes called
+`VERUNE_SCOPE_LEVEL`. It's a number that notes how far down a scope currently
+is, in the case that it may be nested:
+
+```sh
 verune scope
-unset VERUNE_OVERLAYS
+$ echo $VERUNE_SCOPE_LEVEL # 1
+$ verune scope
+$ echo $VERUNE_SCOPE_LEVEL # 2
+$ exit
+$ echo $VERUNE_SCOPE_LEVEL # 1
+$ exit
+echo $VERUNE_SCOPE_LEVEL
 ```
 
-Additionally, overlays can be used with the `apply` subcommand to write the
-overlayed configuration with the `apply` subcommand's `--full` flag. The
-`--full` flag is necessary, because the subcommand will use a non-overlayed
-copy of the configuration without it. This also makes the arguments for
-typically setting which version to switch to optional, which can simplify
-certain overlay-related workflows even more.
+#### Dropping Into Programs
+
+You can immediately drop into a different program than your shell by providing
+at least one argument to `scope`. This even includes programs provided by a
+runtime:
 
 ```sh
-verune --overlay .sec.ver.ron apply --full
+verune scope zig version # 0.16.0
 ```
 
-The overlays system allows multiple additional workflows that typically aren't
-possible with the rest of the subcommands. Overlays can make it easier to
-migrate between versions in some cases, as they're cheaper with less disk space
-usage. However, some may still prefer normal configurations for their ease of
-use and their friendliness with monorepos.
+## Tips and Tricks
 
-### Tips and Tricks
+- It is generally a very good idea to run development tools inside of a
+  `verune` scope. This should be done in order to provide the pinned runtimes
+  to said tools.
+- It is **very** crucial to place any configuration files for `verune` in the
+  version control system for a repository, as it can easily be shared by anyone
+  interacting with the repository's code.
+- Although it isn't a good idea, it is possible to replicate shims in other
+  version managers by writing a script to drop into a runtime.
+- Other programs can use `verune`'s capabilities by making use of its `libver`
+  module, whose code lives in the same repository.
 
-- Running development tools in a `verune` scope is particularly useful for
-  compatibility; for example, an IDE can pick up on runtimes and use the
-  appropriate runtime versions fairly easily.
-- If you're not sure if your setup is ready for a project using `verune`, you
-  can run the `check` subcommand to identify if it's safe to use `verune` and
-  what issues there may be with your current setup.
-  - You may additionally use the `list` subcommand to see what specific
-    versions of each runtime are used by the project.
-- Project configuration files are **recommended** to place in version control.
-  They are capable of supporting both organizations and individuals in using
-  the exact same version of runtimes.
-- Although not recommended, the way `verune` scopes work allows for a behavior
-  similar to shims in other version managers, which are aliases to runtime
-  programs. This can be done using a shell script that runs the `scope`
-  subcommand.
-- Much of the business logic of `verune` is provided by `libver`, which is
-  under the same licensing and can be used by other projects.
+## License
 
-### Licensing
-
-`verune` and `libver` are dual-licensed under the **MIT** and **Apache 2.0**
+`verune` and `libver` are dual-licensed under the _MIT_ and **Apache 2.0**
 licenses. Contributions must be licensed in this manner.
