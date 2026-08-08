@@ -30,20 +30,25 @@ const main_params = clap.parseParamsComptime(
 
 const MainArgs = clap.ResultEx(clap.Help, &main_params, main_parsers);
 
-fn generateHelp(io: Io, version: ?[]const u8, params: []const clap.Param(clap.Help)) !void {
+const GenerateHelpOptions = struct {
+    subcommand: ?[]const u8 = null,
+    list_subcommands: bool = false,
+};
+
+fn generateHelp(io: Io, params: []const clap.Param(clap.Help), opts: GenerateHelpOptions) !void {
     const stderr_handle: Io.File = .stderr();
     var stderr_buffer: [255]u8 = undefined;
     var stderr = stderr_handle.writer(io, &stderr_buffer);
 
     try stderr.interface.print("usage: {s} ", .{@tagName(meta.name)});
-    try stderr.flush();
-    if (version) |v| {
+    if (opts.subcommand) |v| {
         try stderr.interface.print("{s} ", .{v});
-        try stderr.flush();
     }
     try clap.usage(&stderr.interface, clap.Help, params);
     try stderr.interface.writeAll("\n");
     try clap.help(&stderr.interface, clap.Help, params, .{ .description_indent = 4, .spacing_between_parameters = 0 });
+    if (opts.list_subcommands)
+        try stderr.interface.writeAll("subcommands:\n    scope\n        Open a scope for the current project.\n    filter\n        Query the project's runtimes.\n");
     try stderr.flush();
 }
 
@@ -119,7 +124,7 @@ pub fn main(init: std.process.Init) !void {
         return stdout.flush();
     }
     if (res.args.help != 0)
-        return generateHelp(init.io, null, &main_params);
+        return generateHelp(init.io, &main_params, .{ .list_subcommands = true });
 
     const map = init.environ_map;
 
@@ -154,7 +159,7 @@ fn scopeMain(io: Io, gpa: std.mem.Allocator, dir: Io.Dir, map: *std.process.Envi
     defer res.deinit();
 
     if (res.args.help != 0)
-        return generateHelp(io, "scope", &params);
+        return generateHelp(io, &params, .{ .subcommand = "scope" });
 
     var conf_buf: [255]u8 = undefined;
     var scope = try generateScope(io, gpa, dir, map, main_args, &conf_buf);
@@ -177,8 +182,8 @@ fn scopeMain(io: Io, gpa: std.mem.Allocator, dir: Io.Dir, map: *std.process.Envi
 fn filterMain(io: Io, gpa: std.mem.Allocator, dir: Io.Dir, map: *std.process.Environ.Map, iter: *std.process.Args.Iterator, main_args: MainArgs) !void {
     const params = comptime clap.parseParamsComptime(
         \\-h, --help         Display this help and exit.
-        \\-i, --installed    List only installed runtimes
-        \\-u, --uninstalled  List only uninstalled runtimes
+        \\-i, --installed    List only installed runtimes.
+        \\-u, --uninstalled  List only uninstalled runtimes.
     );
 
     var diag = clap.Diagnostic{};
@@ -192,7 +197,7 @@ fn filterMain(io: Io, gpa: std.mem.Allocator, dir: Io.Dir, map: *std.process.Env
     defer res.deinit();
 
     if (res.args.help != 0)
-        return generateHelp(io, "filter", &params);
+        return generateHelp(io, &params, .{ .subcommand = "filter" });
 
     var conf_buf: [255]u8 = undefined;
     var scope = try generateScope(io, gpa, dir, map, main_args, &conf_buf);
