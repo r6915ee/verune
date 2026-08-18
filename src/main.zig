@@ -35,7 +35,7 @@ const GenerateHelpOptions = struct {
     list_subcommands: bool = false,
 };
 
-fn generateHelp(io: Io, params: []const clap.Param(clap.Help), opts: GenerateHelpOptions) !void {
+fn generateHelp(io: Io, params: []const clap.Param(clap.Help), opts: GenerateHelpOptions) !u8 {
     const stderr_handle: Io.File = .stderr();
     var stderr_buffer: [255]u8 = undefined;
     var stderr = stderr_handle.writer(io, &stderr_buffer);
@@ -50,6 +50,7 @@ fn generateHelp(io: Io, params: []const clap.Param(clap.Help), opts: GenerateHel
     if (opts.list_subcommands)
         try stderr.interface.writeAll("subcommands:\n    scope\n        Open a scope for the current project.\n    filter\n        Query the project's runtimes.\n");
     try stderr.flush();
+    return 0;
 }
 
 fn generateScope(io: Io, gpa: std.mem.Allocator, dir: Io.Dir, map: *std.process.Environ.Map, main_args: MainArgs, conf_buf: []u8) !libver.ScopeSentinel {
@@ -98,7 +99,7 @@ fn generateScope(io: Io, gpa: std.mem.Allocator, dir: Io.Dir, map: *std.process.
     return scope;
 }
 
-pub fn main(init: std.process.Init) !void {
+pub fn main(init: std.process.Init) !u8 {
     var iter = try init.minimal.args.iterateAllocator(init.gpa);
     defer iter.deinit();
 
@@ -121,7 +122,8 @@ pub fn main(init: std.process.Init) !void {
         var stdout = stdout_handle.writer(init.io, &stdout_buffer);
 
         try stdout.interface.print("{s}", .{meta.version});
-        return stdout.flush();
+        try stdout.flush();
+        return 0;
     }
     if (res.args.help != 0)
         return generateHelp(init.io, &main_params, .{ .list_subcommands = true });
@@ -135,13 +137,13 @@ pub fn main(init: std.process.Init) !void {
     defer init.gpa.free(home_path);
 
     const command = res.positionals[0] orelse return error.MissingCommand;
-    switch (command) {
+    return switch (command) {
         .scope => try scopeMain(init.io, init.gpa, .cwd(), map, &iter, home_path, res),
         .filter => try filterMain(init.io, init.gpa, .cwd(), map, &iter, res),
-    }
+    };
 }
 
-fn scopeMain(io: Io, gpa: std.mem.Allocator, dir: Io.Dir, map: *std.process.Environ.Map, iter: *std.process.Args.Iterator, home_path: []const u8, main_args: MainArgs) !void {
+fn scopeMain(io: Io, gpa: std.mem.Allocator, dir: Io.Dir, map: *std.process.Environ.Map, iter: *std.process.Args.Iterator, home_path: []const u8, main_args: MainArgs) !u8 {
     const params = comptime clap.parseParamsComptime(
         \\-h, --help  Display this help and exit.
         \\<ARGV>...   A list of arguments to run in the scope; the first argument is the command.
@@ -176,10 +178,12 @@ fn scopeMain(io: Io, gpa: std.mem.Allocator, dir: Io.Dir, map: *std.process.Envi
 
     const argv: []const []const u8 = if (res.positionals[0].len > 0) res.positionals[0] else if (map.get("SHELL")) |sh| &.{sh} else if (builtin.os.tag == .windows) &.{"cmd"} else &.{"sh"};
 
-    return std.process.replace(io, .{ .argv = argv, .environ_map = map });
+    var child = try std.process.spawn(io, .{ .argv = argv, .environ_map = map });
+    const t = try child.wait(io);
+    return t.exited;
 }
 
-fn filterMain(io: Io, gpa: std.mem.Allocator, dir: Io.Dir, map: *std.process.Environ.Map, iter: *std.process.Args.Iterator, main_args: MainArgs) !void {
+fn filterMain(io: Io, gpa: std.mem.Allocator, dir: Io.Dir, map: *std.process.Environ.Map, iter: *std.process.Args.Iterator, main_args: MainArgs) !u8 {
     const params = comptime clap.parseParamsComptime(
         \\-h, --help         Display this help and exit.
         \\-i, --installed    List only installed runtimes.
@@ -226,4 +230,6 @@ fn filterMain(io: Io, gpa: std.mem.Allocator, dir: Io.Dir, map: *std.process.Env
         try stdout.interface.print("{s}={s}\n", .{ x.key_ptr.*, x.value_ptr.* });
         try stdout.flush();
     }
+
+    return 0;
 }
